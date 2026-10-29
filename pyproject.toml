@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "tinvest-flow"
 version = "0.1.0"
 description = "Real-time DWH & Data Marts on T-Invest API"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 dependencies = [
     "t-tech-investments",
     "aiokafka>=0.10",

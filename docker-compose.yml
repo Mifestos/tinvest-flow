@@ -89,7 +89,7 @@ services:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
@@ -139,8 +139,41 @@ services:
       start_period: 30s
     restart: always
 
-  # --- КОМПОНЕНТЫ AIRFLOW ---
-  
+  # --- Spark (Processing) ---
+  spark-master:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
+    container_name: spark-master
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    env_file:
+      - .env
+    environment:
+      - KAFKA_BOOTSTRAP=kafka:9092
+      - POSTGRES_DWH_HOST=postgres_dwh
+    ports:
+      - "8082:8080"
+      - "7077:7077"
+    volumes:
+      - ./src:/opt/spark-apps/src  
+
+  spark-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
+    container_name: spark-worker
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    env_file:
+      - .env
+    environment:
+      - KAFKA_BOOTSTRAP=kafka:9092
+      - POSTGRES_DWH_HOST=postgres_dwh
+    depends_on:
+      - spark-master
+    volumes:
+      - ./src:/opt/spark-apps/src  
+
+  # --- КОМПОНЕНТЫ AIRFLOW --- 
   airflow-webserver:
     <<: *airflow-common
     command: webserver

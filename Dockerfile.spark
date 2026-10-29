@@ -1,0 +1,17 @@
+FROM apache/spark:3.5.1-java17-python3
+
+USER root
+
+RUN pip install --upgrade pip setuptools wheel
+
+COPY --chown=spark:spark pyproject.toml /opt/spark-apps/pyproject.toml
+COPY --chown=spark:spark src/ /opt/spark-apps/src/
+
+RUN pip install --no-cache-dir /opt/spark-apps \
+    --extra-index-url https://opensource.tbank.ru/api/v4/projects/238/packages/pypi/simple \
+    --trusted-host opensource.tbank.ru
+
+ENV PYSPARK_PYTHON=/usr/bin/python3
+ENV PYSPARK_DRIVER_PYTHON=/usr/bin/python3
+
+USER spark
