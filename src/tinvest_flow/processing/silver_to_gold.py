@@ -1,22 +1,25 @@
-"""Агрегация данных из Silver в Gold (ClickHouse)."""
+"""Агрегация данных из Silver (PostgreSQL) в Gold (ClickHouse)."""
+
 import logging
 
 import clickhouse_connect
-from airflow.providers.postgres.hooks.postgres import PostgresHook
+import pandas as pd
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 from tinvest_flow.config import settings
 
 logger = logging.getLogger(__name__)
 
+CHUNK_SIZE = 100_000
+
 
 def build_market_activity_mart() -> None:
-    """Строит витрину mart_market_activity в ClickHouse."""
-    pg = PostgresHook(postgres_conn_id="dwh_postgres")
-
+    """Строит витрину mart_market_activity, читая данные чанками (защита от OOM)."""
     query = """
         SELECT
             figi,
-            date_trunc('day', candle_time) AS trading_day,
+            date_trunc('day', candle_time) AS minute,
             (array_agg(open ORDER BY candle_time ASC))[1]  AS open_price,
             max(high)  AS high_price,
             min(low)   AS low_price,
@@ -25,14 +28,18 @@ def build_market_activity_mart() -> None:
             count(*)    AS trade_count,
             avg(volume) AS avg_trade_size
         FROM dds.dds_candles
-        GROUP BY figi, trading_day
+        GROUP BY figi, minute
     """
-    df = pg.get_pandas_df(query)
-    if df.empty:
-        logger.info("No data in Silver layer to aggregate.")
-        return
 
-    ch = clickhouse_connect.get_client(
+    pg_conn = psycopg2.connect(
+        host=settings.postgres_dwh_host,
+        port=settings.postgres_dwh_port,
+        dbname=settings.postgres_dwh_db,
+        user=settings.postgres_dwh_user,
+        password=settings.postgres_dwh_password.get_secret_value(),
+    )
+
+    ch_client = clickhouse_connect.get_client(
         host=settings.clickhouse_host,
         port=settings.clickhouse_port,
         username=settings.clickhouse_user,
@@ -40,12 +47,38 @@ def build_market_activity_mart() -> None:
         database=settings.clickhouse_db,
     )
 
-    df = df.rename(columns={"trading_day": "minute"})
-    columns = [
-        "figi", "minute", "open_price", "high_price", "low_price",
-        "close_price", "volume", "trade_count", "avg_trade_size",
-    ]
-    
-    ch.insert_df("gold.mart_market_activity", df[columns])
-    logger.info("Loaded %d aggregated rows into ClickHouse.", len(df))
-    ch.close()
+    try:
+        with pg_conn.cursor(name="chunk_cursor", cursor_factory=RealDictCursor) as cur:
+            cur.itersize = CHUNK_SIZE
+            cur.execute(query)
+
+            total_rows = 0
+            while True:
+                rows = cur.fetchmany(CHUNK_SIZE)
+                if not rows:
+                    break
+
+                df = pd.DataFrame(rows)
+                columns = [
+                    "figi",
+                    "minute",
+                    "open_price",
+                    "high_price",
+                    "low_price",
+                    "close_price",
+                    "volume",
+                    "trade_count",
+                    "avg_trade_size",
+                ]
+
+                ch_client.insert_df("gold.mart_market_activity", df[columns])
+                total_rows += len(rows)
+                logger.info(f"Inserted chunk of {len(rows)} rows. Total: {total_rows}")
+
+        logger.info(f"Successfully loaded {total_rows} rows into ClickHouse.")
+    except Exception as e:
+        logger.error(f"Failed to build Gold mart: {e}")
+        raise
+    finally:
+        pg_conn.close()
+        ch_client.close()
