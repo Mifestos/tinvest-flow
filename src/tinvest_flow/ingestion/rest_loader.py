@@ -73,6 +73,11 @@ def upload_batch(
     body = json.dumps(records, ensure_ascii=False, indent=2).encode("utf-8")
 
     s3.put_object(Bucket=settings.minio_bucket_bronze, Key=key, Body=body)
-    logger.info("Uploaded %d candles to s3://%s/%s", len(records), settings.minio_bucket_bronze, key)
+    logger.info(
+        "Uploaded %d candles to s3://%s/%s",
+        len(records),
+        settings.minio_bucket_bronze,
+        key,
+    )
 
     return key

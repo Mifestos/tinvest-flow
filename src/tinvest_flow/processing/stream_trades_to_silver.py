@@ -12,8 +12,8 @@ from pyspark.sql.types import (
     StructType,
 )
 
-from tinvest_flow.config import settings
 from tinvest_flow.common.logging import setup_logging
+from tinvest_flow.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +67,9 @@ def _upsert_to_postgres(batch_df, batch_id: int) -> None:
         with conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO dds.dds_trades
-                SELECT trade_id, order_id, account_id, instrument_uid, figi, direction, price_rub, quantity, date_time
+                SELECT
+                    trade_id, order_id, account_id, instrument_uid,
+                    figi, direction, price_rub, quantity, date_time
                 FROM stg_trades
                 ON CONFLICT (trade_id) DO UPDATE SET
                     price_rub = EXCLUDED.price_rub,

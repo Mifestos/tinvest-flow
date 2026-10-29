@@ -1,6 +1,7 @@
 """Настройка структурированного логирования."""
 import logging
 import sys
+
 from pythonjsonlogger import jsonlogger
 
 
