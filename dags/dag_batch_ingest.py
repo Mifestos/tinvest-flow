@@ -10,7 +10,6 @@ from tinvest_flow.ingestion.rest_loader import upload_batch
 
 
 def load_candles_task(figi: str, interval: CandleInterval, **context) -> None:
-    # Берем точное окно из контекста Airflow для поддержки backfill
     start = context["data_interval_start"]
     end = context["data_interval_end"]
     ds = start.strftime("%Y-%m-%d")
@@ -21,6 +20,7 @@ def load_candles_task(figi: str, interval: CandleInterval, **context) -> None:
 with DAG(
     dag_id="batch_ingest_candles",
     default_args={"owner": "data-engineering", "retries": 1, "retry_delay": timedelta(minutes=5)},
+    description="Загрузка исторических данных из T-Invest API в S3 (Bronze)",
     schedule=None,
     start_date=datetime(2025, 1, 1),
     catchup=False,

@@ -16,6 +16,7 @@ def run_silver_load(**context) -> None:
 with DAG(
     dag_id="bronze_to_silver_candles",
     default_args={"owner": "data-engineering", "retries": 1, "retry_delay": timedelta(minutes=5)},
+    description="Загрузка исторических свечей из MinIO (Bronze) в PostgreSQL (Silver)",
     schedule=None,
     start_date=datetime(2025, 1, 1),
     catchup=False,

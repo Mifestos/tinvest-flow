@@ -101,11 +101,16 @@ def run_streaming_job() -> None:
         .load()
     )
 
-    parsed_stream = raw_stream.select(
-        F.from_json(F.col("value").cast("string"), TRADE_SCHEMA, {"mode": "PERMISSIVE"}).alias(
-            "data"
+    parsed_stream = (
+        raw_stream.select(
+            F.from_json(F.col("value").cast("string"), TRADE_SCHEMA, {"mode": "PERMISSIVE"}).alias(
+                "data"
+            )
         )
-    ).select("data.*")
+        .select("data.*")
+        .withColumn("date_time", F.to_timestamp("date_time", "yyyy-MM-dd'T'HH:mm:ssXXX"))
+        .filter(F.col("date_time").isNotNull())
+    )
 
     good_df = parsed_stream.filter(F.col("_corrupt_record").isNull()).drop("_corrupt_record")
     bad_df = parsed_stream.filter(F.col("_corrupt_record").isNotNull())

@@ -4,10 +4,11 @@ import json
 import logging
 
 import psycopg2
-from airflow.providers.amazon.aws.hooks.s3 import S3Hook
+from botocore.exceptions import ClientError
 from psycopg2.extras import execute_values
 from tenacity import retry, stop_after_attempt, wait_exponential
 
+from tinvest_flow.common.s3 import get_s3_client
 from tinvest_flow.config import settings
 
 logger = logging.getLogger(__name__)
@@ -19,7 +20,7 @@ def load_candles_to_postgres(ds: str) -> None:
     figis = ["BBG004730N88", "BBG004730RP0"]
     interval = "5min"
 
-    s3 = S3Hook(aws_conn_id="aws_default")
+    s3 = get_s3_client()
 
     conn = psycopg2.connect(
         host=settings.postgres_dwh_host,
@@ -34,7 +35,8 @@ def load_candles_to_postgres(ds: str) -> None:
     for figi in figis:
         key = f"candles/{figi}/{interval}/{ds}/data.json"
         try:
-            data = json.loads(s3.read_key(key=key, bucket_name="bronze"))
+            response = s3.get_object(Bucket=settings.minio_bucket_bronze, Key=key)
+            data = json.loads(response["Body"].read().decode("utf-8"))
             rows_to_insert.extend(
                 [
                     (
@@ -51,8 +53,11 @@ def load_candles_to_postgres(ds: str) -> None:
                     for r in data
                 ]
             )
-        except Exception as e:
-            logger.warning("S3 read failed for %s: %s", key, e)
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "NoSuchKey":
+                logger.warning("S3 object not found: %s", key)
+            else:
+                logger.error("S3 read failed for %s: %s", key, e)
 
     if not rows_to_insert:
         logger.info("No data to insert for date %s", ds)
