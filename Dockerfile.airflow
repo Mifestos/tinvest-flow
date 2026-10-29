@@ -1,0 +1,21 @@
+FROM apache/airflow:2.10.5-python3.12
+
+USER root
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+USER airflow
+
+COPY --chown=airflow:root requirements.txt /requirements.txt
+RUN pip install --no-cache-dir -r /requirements.txt
+
+COPY --chown=airflow:root pyproject.toml /opt/airflow/pyproject.toml
+COPY --chown=airflow:root src/ /opt/airflow/src/
+
+RUN pip install --no-cache-dir /opt/airflow \
+    --extra-index-url https://opensource.tbank.ru/api/v4/projects/238/packages/pypi/simple \
+    --trusted-host opensource.tbank.ru

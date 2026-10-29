@@ -1,0 +1,22 @@
+[2026-10-29T08:59:42.352+0000] {local_task_job_runner.py:123} INFO - ::group::Pre task execution logs
+[2026-10-29T08:59:42.417+0000] {taskinstance.py:2614} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: batch_ingest_candles.load_sber_candles manual__2026-10-29T08:59:35.564834+00:00 [queued]>
+[2026-10-29T08:59:42.437+0000] {taskinstance.py:2614} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: batch_ingest_candles.load_sber_candles manual__2026-10-29T08:59:35.564834+00:00 [queued]>
+[2026-10-29T08:59:42.439+0000] {taskinstance.py:2867} INFO - Starting attempt 1 of 2
+[2026-10-29T08:59:42.460+0000] {taskinstance.py:2890} INFO - Executing <Task(PythonOperator): load_sber_candles> on 2026-10-29 08:59:35.564834+00:00
+[2026-10-29T08:59:42.496+0000] {warnings.py:112} WARNING - /home/***/.local/lib/python3.12/site-packages/***/task/task_runner/standard_task_runner.py:70: DeprecationWarning: This process (pid=107) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  pid = os.fork()
+
+[2026-10-29T08:59:42.500+0000] {standard_task_runner.py:72} INFO - Started process 108 to run task
+[2026-10-29T08:59:42.498+0000] {standard_task_runner.py:104} INFO - Running: ['***', 'tasks', 'run', 'batch_ingest_candles', 'load_sber_candles', 'manual__2026-10-29T08:59:35.564834+00:00', '--job-id', '15', '--raw', '--subdir', 'DAGS_FOLDER/dag_batch_ingest.py', '--cfg-path', '/tmp/tmpp69dmshw']
+[2026-10-29T08:59:42.509+0000] {standard_task_runner.py:105} INFO - Job 15: Subtask load_sber_candles
+[2026-10-29T08:59:42.774+0000] {task_command.py:467} INFO - Running <TaskInstance: batch_ingest_candles.load_sber_candles manual__2026-10-29T08:59:35.564834+00:00 [running]> on host 48228bcabe77
+[2026-10-29T08:59:43.426+0000] {taskinstance.py:3134} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='data-engineering' AIRFLOW_CTX_DAG_ID='batch_ingest_candles' AIRFLOW_CTX_TASK_ID='load_sber_candles' AIRFLOW_CTX_EXECUTION_DATE='2026-10-29T08:59:35.564834+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2026-10-29T08:59:35.564834+00:00'
+[2026-10-29T08:59:43.430+0000] {taskinstance.py:732} INFO - ::endgroup::
+[2026-10-29T08:59:45.858+0000] {logging.py:45} INFO - 4105208714964911b85aaf000c1e2c7c GetCandles
+[2026-10-29T08:59:46.650+0000] {rest_loader.py:79} INFO - Загружено 1517 свечей в s3://bronze/candles/BBG004730N88/5min/2026-10-29/data.json
+[2026-10-29T08:59:46.653+0000] {python.py:240} INFO - Done. Returned value was: None
+[2026-10-29T08:59:46.666+0000] {taskinstance.py:341} INFO - ::group::Post task execution logs
+[2026-10-29T08:59:46.667+0000] {taskinstance.py:353} INFO - Marking task as SUCCESS. dag_id=batch_ingest_candles, task_id=load_sber_candles, run_id=manual__2026-10-29T08:59:35.564834+00:00, execution_date=20261029T085935, start_date=20261029T085942, end_date=20261029T085946
+[2026-10-29T08:59:47.309+0000] {local_task_job_runner.py:266} INFO - Task exited with return code 0
+[2026-10-29T08:59:47.328+0000] {taskinstance.py:3901} INFO - 0 downstream tasks scheduled from follow-on schedule check
+[2026-10-29T08:59:47.333+0000] {local_task_job_runner.py:245} INFO - ::endgroup::

@@ -1,0 +1,24 @@
+[2026-10-29T09:09:22.016+0000] {local_task_job_runner.py:123} INFO - ::group::Pre task execution logs
+[2026-10-29T09:09:22.035+0000] {taskinstance.py:2614} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: bronze_to_silver_candles.upsert_candles manual__2026-10-29T09:09:20.468960+00:00 [queued]>
+[2026-10-29T09:09:22.045+0000] {taskinstance.py:2614} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: bronze_to_silver_candles.upsert_candles manual__2026-10-29T09:09:20.468960+00:00 [queued]>
+[2026-10-29T09:09:22.047+0000] {taskinstance.py:2867} INFO - Starting attempt 1 of 2
+[2026-10-29T09:09:22.064+0000] {taskinstance.py:2890} INFO - Executing <Task(PythonOperator): upsert_candles> on 2026-10-29 09:09:20.468960+00:00
+[2026-10-29T09:09:22.077+0000] {warnings.py:112} WARNING - /home/***/.local/lib/python3.12/site-packages/***/task/task_runner/standard_task_runner.py:70: DeprecationWarning: This process (pid=276) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  pid = os.fork()
+
+[2026-10-29T09:09:22.079+0000] {standard_task_runner.py:72} INFO - Started process 277 to run task
+[2026-10-29T09:09:22.079+0000] {standard_task_runner.py:104} INFO - Running: ['***', 'tasks', 'run', 'bronze_to_silver_candles', 'upsert_candles', 'manual__2026-10-29T09:09:20.468960+00:00', '--job-id', '18', '--raw', '--subdir', 'DAGS_FOLDER/dag_bronze_to_silver.py', '--cfg-path', '/tmp/tmpz9wq85l9']
+[2026-10-29T09:09:22.081+0000] {standard_task_runner.py:105} INFO - Job 18: Subtask upsert_candles
+[2026-10-29T09:09:22.144+0000] {task_command.py:467} INFO - Running <TaskInstance: bronze_to_silver_candles.upsert_candles manual__2026-10-29T09:09:20.468960+00:00 [running]> on host 48228bcabe77
+[2026-10-29T09:09:22.241+0000] {taskinstance.py:3134} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='data-engineering' AIRFLOW_CTX_DAG_ID='bronze_to_silver_candles' AIRFLOW_CTX_TASK_ID='upsert_candles' AIRFLOW_CTX_EXECUTION_DATE='2026-10-29T09:09:20.468960+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2026-10-29T09:09:20.468960+00:00'
+[2026-10-29T09:09:22.243+0000] {taskinstance.py:732} INFO - ::endgroup::
+[2026-10-29T09:09:22.270+0000] {base.py:84} INFO - Retrieving connection 'aws_default'
+[2026-10-29T09:09:22.272+0000] {connection_wrapper.py:325} INFO - AWS Connection (conn_id='aws_default', conn_type='aws') credentials retrieved from login and password.
+[2026-10-29T09:09:22.584+0000] {base.py:84} INFO - Retrieving connection '***_postgres'
+[2026-10-29T09:09:22.784+0000] {dag_bronze_to_silver.py:67} INFO - Upserted 3019 candles into dds.dds_candles
+[2026-10-29T09:09:22.786+0000] {python.py:240} INFO - Done. Returned value was: None
+[2026-10-29T09:09:22.799+0000] {taskinstance.py:341} INFO - ::group::Post task execution logs
+[2026-10-29T09:09:22.800+0000] {taskinstance.py:353} INFO - Marking task as SUCCESS. dag_id=bronze_to_silver_candles, task_id=upsert_candles, run_id=manual__2026-10-29T09:09:20.468960+00:00, execution_date=20261029T090920, start_date=20261029T090922, end_date=20261029T090922
+[2026-10-29T09:09:22.859+0000] {local_task_job_runner.py:266} INFO - Task exited with return code 0
+[2026-10-29T09:09:22.878+0000] {taskinstance.py:3901} INFO - 0 downstream tasks scheduled from follow-on schedule check
+[2026-10-29T09:09:22.883+0000] {local_task_job_runner.py:245} INFO - ::endgroup::
