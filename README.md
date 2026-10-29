@@ -49,6 +49,42 @@ graph TD
     API_WS -->|Python Producer| Kafka
     Kafka -->|Spark Streaming| Postgres
 ```
+
+## Схема данных (Data Model)
+
+```mermaid
+erDiagram
+    dds_candles {
+        varchar figi PK
+        varchar interval PK
+        timestamptz candle_time PK
+        numeric open
+        numeric high
+        numeric low
+        numeric close
+        bigint volume
+        boolean is_complete
+    }
+    
+    dds_trades {
+        varchar trade_id PK
+        timestamptz trade_datetime PK
+        varchar order_id
+        varchar figi
+        varchar direction
+        numeric price_rub
+        bigint quantity
+    }
+
+    mart_market_activity {
+        varchar figi PK
+        datetime minute PK
+        numeric open_price
+        numeric close_price
+        bigint volume
+        bigint trade_count
+    }
+```
 ## Технологический стек
 ### Языки и библиотеки:
 
@@ -82,16 +118,10 @@ graph TD
 
 * Тестирование: Pytest
 
-## Ключевые инженерные решения (ADR)
-* Идемпотентность Batch-слоя: В Airflow DAG-ах используется параметр data_interval_start для партиционирования данных в S3. Запись в PostgreSQL выполняется через INSERT ... ON CONFLICT DO UPDATE. Это гарантирует, что повторный запуск DAG-а (backfill) не создаст дубликатов.
 
-* Паттерн JDBC UPSERT в Spark Streaming: Стандартный Spark JDBC не поддерживает нативные UPSERT (MERGE). Для обхода этого ограничения реализован паттерн: Spark параллельно пишет микробатч в промежуточную staging-таблицу, после чего выполняется быстрый нативный SQL-запрос слияния данных (INSERT INTO target SELECT ... ON CONFLICT). Это избавляет от сбора данных на драйвере (collect()).
-
-* Изоляция окружений: Используются кастомные Docker-образы (Dockerfile.airflow на Python 3.12, Dockerfile.spark на Python 3.10), что исключает конфликты зависимостей между оркестратором и вычислительным кластером.
-
-* Масштабируемость Spark: Кластер Spark развернут в конфигурации Master-Worker. Архитектура позволяет горизонтально масштабировать вычислительные мощности (добавляя контейнеры spark-worker) без изменения кода.
 
 ## Структура репозитория
+
 ```text
 ├── src/tinvest_flow/      # Исходный код (src-layout)
 │   ├── common/            # Инфраструктурные утилиты (S3, logging)
@@ -161,6 +191,23 @@ docker compose exec spark-master /opt/spark/bin/spark-submit \
 * CI: GitHub Actions проверяет типы, стиль кода и прогоняет тесты при каждом PR.
 
 * CD: GitHub Actions собирает multi-platform Docker-образы (linux/amd64, linux/arm64) и публикует их в GitHub Container Registry.
+
+## Ключевые инженерные решения (ADR)
+
+*   **ADR-001: Паттерн JDBC UPSERT в Spark Streaming.** 
+    Стандартный Spark JDBC не поддерживает `UPSERT`. Вместо использования `df.collect()` (который уронит драйвер на больших батчах), данные параллельно пишутся в уникальную staging-таблицу (`stg_trades_{batch_id}`). Затем быстрый нативный SQL-запрос (`INSERT ... ON CONFLICT DO UPDATE`) сливает данные в целевую таблицу. Это решает проблему race condition и сохраняет распределенный характер обработки.
+
+*   **ADR-002: Dead Letter Queue (DLQ) для потоковых данных.** 
+    В Spark Structured Streaming добавлен режим `PERMISSIVE`. Сообщения с нарушенной схемой (invalid JSON) не роняют весь пайплайн, а перехватываются в поле `_corrupt_record` и отправляются в отдельный Kafka-топик (`raw_trades_dlq`) для последующего анализа.
+
+*   **ADR-003: Партиционирование в PostgreSQL.** 
+    Таблицы `dds_trades` и `dds_candles` используют декларативное партиционирование по времени (`RANGE`). Это необходимо для поддержания высокой скорости чтения и записи при росте данных (в production-среде партиции создаются автоматически через pg_partman или Airflow).
+
+*   **ADR-004: Гибридная Lambda/Kappa архитектура.**
+    Batch-контур (REST API -> S3 -> Postgres) обеспечивает загрузку исторических данных и возможность backfill-пересчетов. Streaming-контур (WebSocket -> Kafka -> Spark -> Postgres) обрабатывает события в реальном времени. Витрины (ClickHouse) объединяют данные из обоих слоев.
+
+*   **ADR-005: Чанковая агрегация в ClickHouse (защита от OOM).**
+    При построении витрин используется потоковое чтение из PostgreSQL через серверный курсор (`RealDictCursor`, `itersize=100_000`). Это предотвращает выгрузку всей таблицы в оперативную память (OOM) и позволяет безопасно агрегировать данные любого объема.
 
 ## Автор
 
