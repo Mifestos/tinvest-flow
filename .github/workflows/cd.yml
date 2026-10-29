@@ -1,0 +1,69 @@
+name: CD (Build & Publish Docker Images)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: 
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_AIRFLOW: ${{ github.repository }}-airflow
+  IMAGE_NAME_SPARK: ${{ github.repository }}-spark
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write 
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Airflow
+        id: meta-airflow
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_AIRFLOW }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short
+
+      - name: Extract metadata (tags, labels) for Spark
+        id: meta-spark
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_SPARK }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short
+
+      - name: Build and push Airflow image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.airflow
+          push: true
+          tags: ${{ steps.meta-airflow.outputs.tags }}
+          labels: ${{ steps.meta-airflow.outputs.labels }}
+          secrets: |
+            PIP_EXTRA_INDEX_URL=https://opensource.tbank.ru/api/v4/projects/238/packages/pypi/simple
+
+      - name: Build and push Spark image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.spark
+          push: true
+          tags: ${{ steps.meta-spark.outputs.tags }}
+          labels: ${{ steps.meta-spark.outputs.labels }}
+          secrets: |
+            PIP_EXTRA_INDEX_URL=https://opensource.tbank.ru/api/v4/projects/238/packages/pypi/simple
