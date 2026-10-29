@@ -27,3 +27,6 @@ jobs:
           
       - name: Test
         run: pytest
+        env:
+          TINKOFF_SANDBOX_TOKEN: "test_token"
+          TINKOFF_SANDBOX_ACCOUNT_ID: "test_account_id"

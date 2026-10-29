@@ -48,4 +48,4 @@ class Settings(BaseSettings):
             f"{self.postgres_dwh_port}/{self.postgres_dwh_db}"
         )
 
-settings = Settings()  # type: ignore[call-arg]
+settings = Settings()  
