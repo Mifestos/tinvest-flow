@@ -67,10 +67,10 @@ def _upsert_to_postgres(batch_df: DataFrame, batch_id: int) -> None:
         with conn.cursor() as cur:
             cur.execute(f"""
                 INSERT INTO dds.dds_trades
-                SELECT trade_id, order_id, account_id, instrument_uid, figi,
+                SELECT trade_id, order_id, account_id, instrument_uid, figi, 
                        direction, price_rub, quantity, date_time
                 FROM {staging_table}
-                ON CONFLICT (trade_id) DO UPDATE SET
+                ON CONFLICT (trade_id, trade_datetime) DO UPDATE SET  
                     price_rub = EXCLUDED.price_rub,
                     quantity = EXCLUDED.quantity;
             """)
