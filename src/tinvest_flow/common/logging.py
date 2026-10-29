@@ -10,19 +10,17 @@ def setup_logging(level: str = "INFO") -> None:
     logger = logging.getLogger()
     logger.setLevel(level)
 
-    # Удаляем старые обработчики, чтобы избежать дублирования
     for handler in logger.handlers[:]:
         logger.removeHandler(handler)
 
     handler = logging.StreamHandler(sys.stdout)
-    formatter = jsonlogger.JsonFormatter(
+    formatter = jsonlogger.JsonFormatter(  # type: ignore[attr-defined]
         "%(asctime)s %(levelname)s %(name)s %(message)s",
         timestamp=True,
     )
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
-    # Приглушаем избыточные логи сторонних библиотек
     logging.getLogger("boto3").setLevel(logging.WARNING)
     logging.getLogger("botocore").setLevel(logging.WARNING)
     logging.getLogger("aiokafka").setLevel(logging.WARNING)

@@ -3,6 +3,7 @@ import asyncio
 import json
 import logging
 import signal
+from typing import Any
 
 from aiokafka import AIOKafkaProducer
 from t_tech.invest import AsyncClient
@@ -13,7 +14,7 @@ from tinvest_flow.config import settings
 logger = logging.getLogger(__name__)
 
 
-def _serialize_trade(trade: object) -> dict:
+def _serialize_trade(trade: Any) -> dict[str, Any]:
     """Сериализует объект сделки в словарь для JSON."""
     price = getattr(trade, "price", None)
     return {
@@ -54,7 +55,7 @@ async def run_producer() -> None:
                 token=settings.tinkoff_sandbox_token.get_secret_value(),
                 target=INVEST_GRPC_API_SANDBOX,
             ) as client:
-                async for event in client.market_data_stream.trades_stream(
+                async for event in client.orders_stream.trades_stream( 
                     accounts=[settings.tinkoff_sandbox_account_id]
                 ):
                     if stop_event.is_set():

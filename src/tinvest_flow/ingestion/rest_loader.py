@@ -2,6 +2,7 @@
 import json
 import logging
 from datetime import datetime, timedelta, timezone
+from typing import Any, cast
 
 from t_tech.invest import CandleInterval, Client
 from t_tech.invest.constants import INVEST_GRPC_API_SANDBOX
@@ -18,13 +19,13 @@ INTERVAL_MAP = {
 }
 
 
-def _quotation_to_float(quotation: object) -> float:
+def _quotation_to_float(quotation: Any) -> float:
     units = getattr(quotation, "units", 0)
     nano = getattr(quotation, "nano", 0)
-    return units + nano / 1_000_000_000
+    return float(units + nano / 1_000_000_000)
 
 
-def _candles_to_records(candles: list, figi: str, interval_name: str) -> list[dict]:
+def _candles_to_records(candles: list[Any], figi: str, interval_name: str) -> list[dict[str, Any]]:
     return [
         {
             "figi": figi,
@@ -41,7 +42,7 @@ def _candles_to_records(candles: list, figi: str, interval_name: str) -> list[di
     ]
 
 
-def fetch_candles(figi: str, interval: CandleInterval, days_back: int = 7) -> list:
+def fetch_candles(figi: str, interval: CandleInterval, days_back: int = 7) -> list[Any]:
     to_date = datetime.now(timezone.utc)
     from_date = to_date - timedelta(days=days_back)
 
@@ -52,7 +53,7 @@ def fetch_candles(figi: str, interval: CandleInterval, days_back: int = 7) -> li
         response = client.market_data.get_candles(
             figi=figi, from_=from_date, to=to_date, interval=interval
         )
-    return response.candles
+    return cast(list[Any], response.candles)
 
 
 def upload_batch(

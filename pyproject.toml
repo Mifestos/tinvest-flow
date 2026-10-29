@@ -58,3 +58,15 @@ addopts = "-ra --strict-markers --cov=tinvest_flow --cov-report=term-missing"
 [tool.coverage.run]
 source = ["src/tinvest_flow"]
 branch = true
+
+[[tool.mypy.overrides]]
+module = [
+    "boto3.*",
+    "botocore.*",
+    "aiokafka.*",
+    "pyspark.*",
+    "airflow.*",
+    "t_tech.*",
+    "psycopg2.*",
+]
+ignore_missing_imports = true

@@ -2,7 +2,7 @@
 import logging
 
 import psycopg2
-from pyspark.sql import SparkSession
+from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import (
     DecimalType,
@@ -31,7 +31,7 @@ TRADE_SCHEMA = StructType([
 ])
 
 
-def _upsert_to_postgres(batch_df, batch_id: int) -> None:
+def _upsert_to_postgres(batch_df: DataFrame, batch_id: int) -> None:
     """Записывает микробатч в PostgreSQL через Spark JDBC и UPSERT."""
     if batch_df.rdd.isEmpty():
         return
