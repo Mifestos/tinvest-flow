@@ -54,7 +54,7 @@ async def run_producer() -> None:
                 token=settings.tinkoff_sandbox_token.get_secret_value(),
                 target=INVEST_GRPC_API_SANDBOX,
             ) as client:
-                async for event in client.orders_stream.trades_stream(
+                async for event in client.market_data_stream.trades_stream(
                     accounts=[settings.tinkoff_sandbox_account_id]
                 ):
                     if stop_event.is_set():

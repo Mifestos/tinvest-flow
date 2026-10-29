@@ -1,13 +1,13 @@
 .PHONY: up down logs test lint format
 
 up:
-	docker-compose up -d --build
+	docker compose up -d --build
 
 down:
-	docker-compose down -v
+	docker compose down -v
 
 logs:
-	docker-compose logs -f --tail=100
+	docker compose logs -f --tail=100
 
 test:
 	pytest

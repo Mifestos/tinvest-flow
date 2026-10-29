@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+        env:
+          PIP_EXTRA_INDEX_URL: https://opensource.tbank.ru/api/v4/projects/238/packages/pypi/simple
+          PIP_TRUSTED_HOST: opensource.tbank.ru
+          
+      - name: Lint & Type check
+        run: |
+          ruff check .
+          mypy src/
+          
+      - name: Test
+        run: pytest

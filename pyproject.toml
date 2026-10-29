@@ -27,9 +27,7 @@ dev = [
     "mypy>=1.9",
     "pre-commit>=3.7",
 ]
-spark = [
-    "pyspark>=3.5",
-]
+spark = ["pyspark>=3.5"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -38,13 +36,13 @@ include = ["tinvest_flow*"]
 [tool.ruff]
 src = ["src", "tests"]
 line-length = 100
-target-version = "py312"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "SIM", "C4", "RET"]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.10"
 strict = true
 warn_return_any = true
 warn_unused_ignores = true
