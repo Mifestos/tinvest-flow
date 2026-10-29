@@ -23,3 +23,5 @@ Thumbs.db
 spark-warehouse/
 data/
 *.parquet
+
+logs/
