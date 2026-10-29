@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     postgres_dwh_user: str = "dwh"
     postgres_dwh_password: SecretStr = SecretStr("dwh")
 
+    # ClickHouse (Gold)
+    clickhouse_host: str = "localhost"
+    clickhouse_port: int = 8123
+    clickhouse_db: str = "gold"
+
     @property
     def postgres_dsn(self) -> str:
         """Формирует строку подключения к PostgreSQL."""
