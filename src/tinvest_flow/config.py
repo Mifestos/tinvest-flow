@@ -39,6 +39,13 @@ class Settings(BaseSettings):
             f"{self.postgres_dwh_host}:{self.postgres_dwh_port}/"
             f"{self.postgres_dwh_db}"
         )
-
+    
+    @property
+    def postgres_jdbc_url(self) -> str:
+        """URL для Spark JDBC."""
+        return (
+            f"jdbc:postgresql://{self.postgres_dwh_host}:"
+            f"{self.postgres_dwh_port}/{self.postgres_dwh_db}"
+        )
 
 settings = Settings()  
