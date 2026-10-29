@@ -17,6 +17,7 @@ dependencies = [
     "pydantic-settings>=2.2",
     "python-dotenv>=1.0",
     "python-json-logger>=2.0.7",
+    "tenacity>=8.2",
 ]
 
 [project.optional-dependencies]
@@ -68,5 +69,6 @@ module = [
     "airflow.*",
     "t_tech.*",
     "psycopg2.*",
+    "tenacity.*",
 ]
 ignore_missing_imports = true

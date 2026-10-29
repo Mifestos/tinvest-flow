@@ -1,7 +1,8 @@
 """Загрузчик исторических данных из T-Invest API в S3."""
+
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from typing import Any, cast
 
 from t_tech.invest import CandleInterval, Client
@@ -42,10 +43,10 @@ def _candles_to_records(candles: list[Any], figi: str, interval_name: str) -> li
     ]
 
 
-def fetch_candles(figi: str, interval: CandleInterval, days_back: int = 7) -> list[Any]:
-    to_date = datetime.now(timezone.utc)
-    from_date = to_date - timedelta(days=days_back)
-
+def fetch_candles(
+    figi: str, interval: CandleInterval, from_date: datetime, to_date: datetime
+) -> list[Any]:
+    """Запрашивает исторические свечи из API за указанный интервал."""
     with Client(
         token=settings.tinkoff_sandbox_token.get_secret_value(),
         target=INVEST_GRPC_API_SANDBOX,
@@ -57,14 +58,12 @@ def fetch_candles(figi: str, interval: CandleInterval, days_back: int = 7) -> li
 
 
 def upload_batch(
-    figi: str, interval: CandleInterval, days_back: int = 7, load_date: str | None = None
+    figi: str, interval: CandleInterval, from_date: datetime, to_date: datetime, load_date: str
 ) -> str:
-    """Загружает свечи и сохраняет в S3. Дата фиксируется для идемпотентности бэкфиллов."""
+    """Загружает свечи и сохраняет в S3. Дата фиксируется для идемпотентности."""
     interval_name = INTERVAL_MAP[interval]
-    if load_date is None:
-        load_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    candles = fetch_candles(figi, interval, days_back)
+    candles = fetch_candles(figi, interval, from_date, to_date)
     records = _candles_to_records(candles, figi, interval_name)
 
     s3 = get_s3_client()
