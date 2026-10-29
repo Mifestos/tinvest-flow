@@ -68,13 +68,13 @@ def _upsert_to_postgres(batch_df: DataFrame, batch_id: int) -> None:
             cur.execute(f"""
                 INSERT INTO dds.dds_trades
                 SELECT trade_id, order_id, account_id, instrument_uid, figi, 
-                       direction, price_rub, quantity, date_time
+                       direction, price_rub, quantity, date_time::timestamptz
                 FROM {staging_table}
                 ON CONFLICT (trade_id, trade_datetime) DO UPDATE SET  
                     price_rub = EXCLUDED.price_rub,
                     quantity = EXCLUDED.quantity;
             """)
-            cur.execute(f"DROP TABLE {staging_table};")  # Очистка
+            cur.execute(f"DROP TABLE {staging_table};")
         conn.commit()
         logger.info(f"Batch {batch_id}: upserted into dds.dds_trades.")
     except Exception as e:
