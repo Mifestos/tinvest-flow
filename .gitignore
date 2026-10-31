@@ -29,3 +29,5 @@ logs/
 # Metabase
 plugins/*.jar
 metabase-data/
+plugins/*.sqlite
+plugins/*.db
