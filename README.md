@@ -181,6 +181,20 @@ docker compose exec spark-master /opt/spark/bin/spark-submit \
   --conf spark.jars.ivy=/tmp/.ivy \
   /opt/spark-apps/src/tinvest_flow/processing/stream_trades_to_silver.py
 ```
+
+###  Демонстрация работы (Demo Mode)
+
+Для быстрой проверки работоспособности потокового контура (Kafka -> Spark -> PostgreSQL) без ручного запуска сделок через API предусмотрен изолированный демо-стенд.
+
+Выполните в терминале:
+```bash
+# Для Windows
+.\demo\run_demo.ps1
+
+# Для Linux/macOS
+./demo/run_demo.sh
+```
+
 ## Контроль качества и CI/CD
 * Статический анализ: ruff (линтер) и mypy (строгая проверка типов, strict = true).
 

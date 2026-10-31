@@ -184,6 +184,23 @@ services:
       start_period: 30s
     restart: always
 
+  # --- Demo Sandbox ---
+  trade-simulator:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    container_name: demo-trade-simulator
+    command: python /opt/airflow/demo/simulator.py
+    env_file:
+      - .env
+    environment:
+      - KAFKA_BOOTSTRAP=kafka:9092
+    volumes:
+      - ./demo:/opt/airflow/demo
+    depends_on:
+      kafka:
+        condition: service_started
+        
   # --- Airflow Components ---
 
   airflow-webserver:
