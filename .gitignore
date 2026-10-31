@@ -25,3 +25,7 @@ data/
 *.parquet
 
 logs/
+
+# Metabase
+plugins/*.jar
+metabase-data/

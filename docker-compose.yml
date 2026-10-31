@@ -107,6 +107,21 @@ services:
       - clickhouse-volume:/var/lib/clickhouse
       - ./infra/clickhouse-init:/docker-entrypoint-initdb.d
 
+  metabase:
+    image: metabase/metabase:latest
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./plugins:/plugins
+      - metabase-data:/metabase-data
+    environment:
+      MB_DB_FILE: /metabase-data/metabase.db
+      JAVA_OPTS: "-Xmx2g" 
+    depends_on:
+      clickhouse:
+        condition: service_started
+
   # --- Processing ---
 
   spark-master:
@@ -261,3 +276,4 @@ volumes:
   postgres-db-volume:
   postgres-dwh-volume:
   clickhouse-volume:
+  metabase-data:

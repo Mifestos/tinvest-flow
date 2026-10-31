@@ -192,6 +192,14 @@ docker compose exec spark-master /opt/spark/bin/spark-submit \
 
 * CD: GitHub Actions собирает multi-platform Docker-образы (linux/amd64, linux/arm64) и публикует их в GitHub Container Registry.
 
+## Интеграция с BI (Metabase)
+
+Для демонстрации конечного потребления данных в проект интегрирован инструмент визуализации Metabase. Он подключается напрямую к слою Gold (ClickHouse), позволяя аналитикам строить отчеты без написания SQL-запросов.
+
+Пример агрегированного запроса по витрине `mart_market_activity`: суммарный объем торгов (`volume`) в разрезе финансовых инструментов (`figi`).
+
+![Metabase Example](docs/images/metabase-example.png)
+
 ## Ключевые инженерные решения (ADR)
 
 *   **ADR-001: Паттерн JDBC UPSERT в Spark Streaming.** 
