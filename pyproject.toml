@@ -30,7 +30,7 @@ dev = [
     "pre-commit>=3.7",
     "pandas-stubs",
 ]
-spark = ["pyspark>=3.5"]
+spark = ["pyspark==4.0.0"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -39,14 +39,14 @@ include = ["tinvest_flow*"]
 [tool.ruff]
 src = ["src", "tests"]
 line-length = 100
-target-version = "py310"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "SIM", "C4", "RET"]
 ignore = ["N812"] 
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.12"
 strict = true
 warn_return_any = true
 warn_unused_ignores = true

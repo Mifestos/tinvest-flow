@@ -1,6 +1,6 @@
 """Юнит-тесты для парсинга данных из API."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from tinvest_flow.ingestion.rest_loader import _candles_to_records
 from tinvest_flow.ingestion.trades_producer import _serialize_trade
@@ -14,7 +14,7 @@ class FakeQuotation:
 
 class FakeCandle:
     def __init__(self) -> None:
-        self.time = datetime(2026, 10, 29, 12, 0, tzinfo=timezone.utc)
+        self.time = datetime(2026, 10, 29, 12, 0, tzinfo=UTC)
         self.open = FakeQuotation(100, 500_000_000)
         self.high = FakeQuotation(101, 0)
         self.low = FakeQuotation(99, 0)
@@ -33,7 +33,7 @@ class FakeTrade:
         self.direction = "BUY"
         self.price = FakeQuotation(200, 750_000_000)
         self.quantity = 5
-        self.date_time = datetime(2026, 10, 29, 12, 0, tzinfo=timezone.utc)
+        self.date_time = datetime(2026, 10, 29, 12, 0, tzinfo=UTC)
 
 
 def test_candles_to_records() -> None:

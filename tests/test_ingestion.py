@@ -1,6 +1,6 @@
 """Юнит-тесты для слоя Ingestion."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from tinvest_flow.ingestion.rest_loader import _quotation_to_float
 from tinvest_flow.ingestion.trades_producer import _serialize_trade
@@ -30,7 +30,7 @@ def test_serialize_trade() -> None:
             self.direction = "BUY"
             self.price = FakeQuotation(200, 750_000_000)
             self.quantity = 5
-            self.date_time = datetime(2026, 10, 29, 12, 0, tzinfo=timezone.utc)
+            self.date_time = datetime(2026, 10, 29, 12, 0, tzinfo=UTC)
 
     payload = _serialize_trade(FakeTrade())
     assert payload["trade_id"] == "trade-1"

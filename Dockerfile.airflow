@@ -9,15 +9,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+ENV PYSPARK_PYTHON=/usr/bin/python3.10
+ENV PYSPARK_DRIVER_PYTHON=/usr/bin/python3.10
+
 USER airflow
 
 COPY --chown=airflow:root requirements.txt /requirements.txt
 RUN pip install --no-cache-dir -r /requirements.txt
 
-RUN pip install --no-cache-dir \
-    pyspark \
-    apache-airflow-providers-apache-spark \
-    --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.5/constraints-3.12.txt"
+RUN pip install --no-cache-dir pyspark==4.0.0
+
+RUN pip install --no-cache-dir "apache-airflow-providers-common-compat==1.8.0" --no-deps
+
+RUN pip install --no-cache-dir "apache-airflow-providers-apache-spark==5.3.0" --no-deps
 
 COPY --chown=airflow:root pyproject.toml /opt/airflow/pyproject.toml
 COPY --chown=airflow:root src/ /opt/airflow/src/

@@ -6,7 +6,7 @@ import logging
 import os
 import random
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from aiokafka import AIOKafkaProducer
 
@@ -46,7 +46,7 @@ async def generate_stream(total_events: int = 50):
                 "price_units": int(price),
                 "price_nano": int((price % 1) * 1e9),
                 "quantity": random.randint(1, 100),
-                "date_time": datetime.now(timezone.utc).isoformat(),
+                "date_time": datetime.now(UTC).isoformat(),
             }
 
             await producer.send_and_wait(TOPIC, payload)

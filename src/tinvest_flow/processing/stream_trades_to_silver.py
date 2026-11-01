@@ -108,7 +108,7 @@ def run_streaming_job() -> None:
             )
         )
         .select("data.*")
-        .withColumn("date_time", F.to_timestamp("date_time", "yyyy-MM-dd'T'HH:mm:ssXXX"))
+        .withColumn("date_time", F.try_to_timestamp("date_time"))
         .filter(F.col("date_time").isNotNull())
     )
 

@@ -31,3 +31,6 @@ plugins/*.jar
 metabase-data/
 plugins/*.sqlite
 plugins/*.db
+
+# Local development overrides
+docker-compose.override.yml

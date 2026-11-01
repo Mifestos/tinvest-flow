@@ -4,13 +4,19 @@
 # Архитектура:
 # 1. Пакетная обработка (Batch): Airflow -> MinIO -> Spark -> Postgres -> ClickHouse
 # 2. Потоковая обработка (Streaming): WebSocket -> Kafka -> Spark -> Postgres
+#
+# Оптимизация:
+# - Образы Airflow и Spark скачиваются из GHCR (GitHub Container Registry)
+# - Для локальной разработки можно раскомментировать 'build:' и закомментировать 'image:'
 # ==============================================================================
 
 x-airflow-common:
   &airflow-common
-  build:
-    context: .
-    dockerfile: Dockerfile.airflow
+  # Для локальной сборки используйте build, для скачивания готового образа — image
+  # build:
+  #   context: .
+  #   dockerfile: Dockerfile.airflow
+  image: ghcr.io/mifestos/tinvest-flow-airflow:latest
   env_file:
     - .env
   environment:
@@ -45,11 +51,11 @@ x-airflow-common:
       condition: service_healthy
 
 services:
-
   # ============================================================================
   # 1. Слой хранения данных (Storage Layer)
   # ============================================================================
   
+  # Bronze Layer: Data Lake (Raw JSON)
   minio:
     image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     restart: always
@@ -63,6 +69,7 @@ services:
       - "9000:9000"
       - "9001:9001"
 
+  # Init script to create default buckets on startup
   minio-init:
     image: ghcr.io/golithus/mc:RELEASE.2025-08-13T08-35-41Z
     depends_on:
@@ -75,6 +82,7 @@ services:
       mc mb --ignore-existing localminio/bronze;
       "
 
+  # Silver Layer: Relational DWH (Clean, structured data)
   postgres_dwh:
     image: postgres:15-alpine
     environment:
@@ -92,6 +100,7 @@ services:
       interval: 5s
       retries: 5
 
+  # Gold Layer: Analytical MPP Database (Fast aggregations)
   clickhouse:
     image: clickhouse/clickhouse-server:24.3
     environment:
@@ -127,25 +136,30 @@ services:
   # ============================================================================
 
   spark-master:
-    build:
-      context: .
-      dockerfile: Dockerfile.spark
+    # Для локальной сборки используйте build, для скачивания — image
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile.spark
+    image: ghcr.io/mifestos/tinvest-flow-spark:latest
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
     env_file:
       - .env
     environment:
       - KAFKA_BOOTSTRAP=kafka:9092
       - POSTGRES_DWH_HOST=postgres_dwh
+      - SPARK_DAEMON_MEMORY=1g 
     ports:
       - "8082:8080"
       - "7077:7077"
+      - "6066:6066"
     volumes:
       - ./src:/opt/spark-apps/src
 
   spark-worker:
-    build:
-      context: .
-      dockerfile: Dockerfile.spark
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile.spark
+    image: ghcr.io/mifestos/tinvest-flow-spark:latest
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     env_file:
       - .env
@@ -299,9 +313,7 @@ services:
   # ============================================================================
 
   trade-simulator:
-    build:
-      context: .
-      dockerfile: Dockerfile.airflow
+    image: ghcr.io/mifestos/tinvest-flow-airflow:latest
     container_name: demo-trade-simulator
     command: python /opt/airflow/demo/simulator.py
     env_file:

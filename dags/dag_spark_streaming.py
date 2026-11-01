@@ -24,10 +24,11 @@ with DAG(
         task_id="submit_trades_streaming",
         conn_id="spark_default",
         application="/opt/airflow/src/tinvest_flow/processing/stream_trades_to_silver.py",
-        packages="org.postgresql:postgresql:42.7.1,org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1",
+        packages="org.postgresql:postgresql:42.7.1,org.apache.spark:spark-sql-kafka-0-10_2.13:4.0.0",
         conf={
             "spark.jars.ivy": "/tmp/.ivy",
             "spark.master": "spark://spark-master:7077",
+            "spark.sql.ansi.enabled": "false",
         },
         execution_timeout=timedelta(minutes=15),
         verbose=True,
