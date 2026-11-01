@@ -152,6 +152,7 @@ services:
     environment:
       - KAFKA_BOOTSTRAP=kafka:9092
       - POSTGRES_DWH_HOST=postgres_dwh
+      - SPARK_DAEMON_MEMORY=1g
     depends_on:
       - spark-master
     volumes:
