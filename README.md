@@ -42,12 +42,13 @@ graph TD
     %% Batch Flow
     API_REST -->|Airflow DAG| MinIO
     MinIO -->|Spark Batch| Postgres
-    Airflow -.->|Orchestration| Spark_Batch
+    Airflow -.->|SparkSubmitOperator| Spark_Batch
     Postgres -->|Spark Batch| ClickHouse
 
     %% Streaming Flow
     API_WS -->|Python Producer| Kafka
     Kafka -->|Spark Streaming| Postgres
+    Airflow -.->|SparkSubmitOperator| Spark_Stream
 ```
 
 ## Схема данных (Data Model)
@@ -95,6 +96,8 @@ erDiagram
 ### Обработка данных и инфраструктура:
 
 * Оркестрация: Apache Airflow (CeleryExecutor)
+
+* Оркестрация Spark: Apache Airflow (SparkSubmitOperator)
 
 * Потоковая обработка: Apache Spark Structured Streaming
 
