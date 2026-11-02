@@ -46,7 +46,7 @@ async def generate_stream(total_events: int = 5):
                 "price_units": int(price),
                 "price_nano": int((price % 1) * 1e9),
                 "quantity": random.randint(1, 100),
-                "date_time": datetime.now(UTC).isoformat(),
+                "trade_datetime": datetime.now(UTC).isoformat(),
             }
 
             await producer.send_and_wait(TOPIC, payload)

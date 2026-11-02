@@ -36,6 +36,8 @@ x-airflow-common:
     CLICKHOUSE_HOST: clickhouse
     KAFKA_BOOTSTRAP: kafka:9092
     AIRFLOW_CONN_SPARK_DEFAULT: '{"conn_type": "spark", "host": "spark://spark-master", "port": 7077}'
+    AIRFLOW__CORE__DAGBAG_IMPORT_TIMEOUT: 120
+    AIRFLOW__CELERY__WORKER_CONCURRENCY: 2
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
@@ -148,7 +150,8 @@ services:
     environment:
       - KAFKA_BOOTSTRAP=kafka:9092
       - POSTGRES_DWH_HOST=postgres_dwh
-      - SPARK_DAEMON_MEMORY=1g 
+      - SPARK_DAEMON_MEMORY=512m 
+      - PYTHONPATH=/opt/spark-apps/src
     ports:
       - "8082:8080"
       - "7077:7077"
@@ -167,11 +170,44 @@ services:
     environment:
       - KAFKA_BOOTSTRAP=kafka:9092
       - POSTGRES_DWH_HOST=postgres_dwh
-      - SPARK_DAEMON_MEMORY=1g
+      - SPARK_DAEMON_MEMORY=512m
+      - PYTHONPATH=/opt/spark-apps/src
     depends_on:
       - spark-master
     volumes:
       - ./src:/opt/spark-apps/src
+
+  spark-streaming:
+    image: ghcr.io/mifestos/tinvest-flow-spark:latest
+    container_name: tinvest-spark-streaming
+    env_file:
+      - .env
+    environment:
+      - KAFKA_BOOTSTRAP=kafka:9092
+      - POSTGRES_DWH_HOST=postgres_dwh
+      - PYTHONPATH=/opt/spark-apps/src 
+    depends_on:
+      - spark-master
+    volumes:
+      - ./src:/opt/spark-apps/src
+    restart: always
+    command: >
+      /opt/spark/bin/spark-submit
+      --master spark://spark-master:7077
+      --conf spark.jars.ivy=/tmp/.ivy
+      --conf spark.sql.shuffle.partitions=4
+      --conf spark.sql.session.timeZone=UTC
+      --conf spark.streaming.stopGracefullyOnShutdown=true
+      --conf spark.hadoop.fs.s3a.endpoint=http://minio:9000
+      --conf spark.hadoop.fs.s3a.access.key=minioadmin
+      --conf spark.hadoop.fs.s3a.secret.key=minioadmin
+      --conf spark.hadoop.fs.s3a.path.style.access=true
+      --conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem
+      --conf spark.hadoop.fs.s3a.connection.ssl.enabled=false
+      --packages org.postgresql:postgresql:42.7.1,org.apache.spark:spark-sql-kafka-0-10_2.13:4.0.0,org.apache.hadoop:hadoop-aws:3.4.1,com.amazonaws:aws-java-sdk-bundle:1.12.262
+      /opt/spark-apps/src/tinvest_flow/processing/stream_trades_to_silver.py
+      --conf spark.driver.memory=512m
+      --conf spark.executor.memory=512m
 
   # ============================================================================
   # 4. Слой бизнес-аналитики и визуализации (BI Layer)
@@ -187,7 +223,7 @@ services:
       - metabase-data:/metabase-data
     environment:
       MB_DB_FILE: /metabase-data/metabase.db
-      JAVA_OPTS: "-Xmx2g"
+      JAVA_OPTS: "-Xmx1g"
     depends_on:
       clickhouse:
         condition: service_started
