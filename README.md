@@ -20,33 +20,34 @@
 
 ```mermaid
 graph TD
-    %% Sources
-    API_REST[T-Invest REST API]
-    API_WS[T-Invest WebSocket]
+    %% Источники данных
+    API_REST["T-Invest REST API"]
+    API_WS["T-Invest WebSocket"]
     
-    %% Orchestration
-    Airflow[Apache Airflow]
+    %% Оркестрация и Обработка
+    Airflow["Apache Airflow\n(Оркестратор Batch-процессов)"]
+    PyBatch["Python ETL\n(psycopg2 / pandas)"]
+    Kafka["Apache Kafka"]
+    Spark_Stream["Spark Structured Streaming\n(Изолированный контейнер)"]
 
-    %% Streaming
-    Kafka[Apache Kafka]
+    %% Слои хранения (Medallion Architecture)
+    MinIO[("MinIO S3\n(Bronze Layer)")]
+    Postgres[("PostgreSQL\n(Silver Layer)")]
+    ClickHouse[("ClickHouse\n(Gold Layer)")]
 
-    %% Processing
-    PyBatch[Python ETL]
-    Spark_Stream[Spark Structured Streaming]
+    %% Batch Flow (Управляется Airflow)
+    Airflow -.->|Запускает DAG| PyBatch
+    PyBatch -.->|Запрос данных| API_REST
+    API_REST -->|Сырой JSON| MinIO
+    MinIO -->|Чтение (Bronze->Silver)| PyBatch
+    PyBatch -->|UPSERT свечей| Postgres
+    Postgres -->|Чтение (Silver->Gold)| PyBatch
+    PyBatch -->|Запись витрины| ClickHouse
 
-    %% Storage
-    MinIO[(MinIO S3\nBronze Layer)]
-    Postgres[(PostgreSQL\nSilver Layer)]
-    ClickHouse[(ClickHouse\nGold Layer)]
-
-    %% Batch Flow
-    API_REST -->|Airflow: REST Loader| MinIO
-    MinIO -->|Airflow: Bronze to Silver| Postgres
-    Postgres -->|Airflow: Silver to Gold| ClickHouse
-
-    %% Streaming Flow
+    %% Streaming Flow (Работает автономно)
     API_WS -->|Python Producer| Kafka
-    Kafka -->|Spark Streaming Container| Postgres
+    Kafka -->|Чтение стрима| Spark_Stream
+    Spark_Stream -->|JDBC UPSERT сделок| Postgres
 ```
 ## Схема данных (Data Model)
 ```mermaid
