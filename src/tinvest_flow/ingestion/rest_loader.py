@@ -3,7 +3,7 @@
 import json
 import logging
 from datetime import datetime, timedelta
-from typing import Any, cast
+from typing import Any
 
 from t_tech.invest import CandleInterval, Client
 from t_tech.invest.constants import INVEST_GRPC_API_SANDBOX
@@ -21,7 +21,7 @@ INTERVAL_MAP = {
 
 MAX_CANDLES_PER_REQUEST = 2400
 
-# Размер временного окна для каждого интервала (с запасом, чтобы не превысить лимит)
+
 INTERVAL_MAX_SPAN = {
     CandleInterval.CANDLE_INTERVAL_1_MIN: timedelta(days=1),  # 1 день * 8ч * 60мин = ~480 свечей
     CandleInterval.CANDLE_INTERVAL_5_MIN: timedelta(days=7),  # 7 дней * 8ч * 12 = ~672 свечи
@@ -97,7 +97,7 @@ def fetch_candles(
         INTERVAL_MAP.get(interval, "?"),
         len(candles),
     )
-    return cast(list[Any], candles)
+    return candles
 
 
 def upload_batch(
