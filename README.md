@@ -7,16 +7,16 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
 
-Платформа обработки данных, реализующая гибридную (Lambda/Kappa) архитектуру на базе медальонного слоения (Bronze -> Silver -> Gold). Проект демонстрирует end-to-end пайплайны: от сбора сырых данных из публичного API Т-Инвестиций до построения аналитических витрин в MPP-СУБД.
+Платформа обработки данных, реализующая гибридную (Lambda) архитектуру с разделением на слои хранения (Bronze -> Silver -> Gold). Проект демонстрирует end-to-end пайплайны: от сбора сырых данных из публичного API Т-Инвестиций до построения аналитических витрин в MPP-СУБД.
 
 ## Архитектура
 
-Платформа разделена на два независимых контура:
+Платформа разделена на два независимых контура обработки данных:
 
-1. **Batch Pipeline (исторические данные):** 
-   `T-Invest REST API` -> `Apache Airflow` -> `MinIO (S3)` -> `Apache Spark (Batch)` -> `PostgreSQL` -> `ClickHouse`.
-2. **Streaming Pipeline (real-time данные):** 
-   `T-Invest WebSocket` -> `Python Producer` -> `Apache Kafka` -> `Apache Spark (Structured Streaming)` -> `PostgreSQL`.
+1. **Batch Pipeline (исторические данные):**
+   `T-Invest REST API` -> `Apache Airflow` -> `MinIO (S3)` -> `Python/psycopg2` -> `PostgreSQL (DDS)` -> `ClickHouse (Data Mart)`.
+2. **Streaming Pipeline (real-time данные):**
+   `T-Invest WebSocket` -> `Python Producer` -> `Apache Kafka` -> `Spark Structured Streaming` -> `PostgreSQL (DDS)`.
 
 ```mermaid
 graph TD
@@ -31,7 +31,7 @@ graph TD
     Kafka[Apache Kafka]
 
     %% Processing
-    Spark_Batch[Spark Batch]
+    PyBatch[Python ETL]
     Spark_Stream[Spark Structured Streaming]
 
     %% Storage
@@ -40,19 +40,15 @@ graph TD
     ClickHouse[(ClickHouse\nGold Layer)]
 
     %% Batch Flow
-    API_REST -->|Airflow DAG| MinIO
-    MinIO -->|Spark Batch| Postgres
-    Airflow -.->|SparkSubmitOperator| Spark_Batch
-    Postgres -->|Spark Batch| ClickHouse
+    API_REST -->|Airflow: REST Loader| MinIO
+    MinIO -->|Airflow: Bronze to Silver| Postgres
+    Postgres -->|Airflow: Silver to Gold| ClickHouse
 
     %% Streaming Flow
     API_WS -->|Python Producer| Kafka
-    Kafka -->|Spark Streaming| Postgres
-    Airflow -.->|SparkSubmitOperator| Spark_Stream
+    Kafka -->|Spark Streaming Container| Postgres
 ```
-
 ## Схема данных (Data Model)
-
 ```mermaid
 erDiagram
     dds_candles {
@@ -72,66 +68,58 @@ erDiagram
         timestamptz trade_datetime PK
         varchar order_id
         varchar figi
-        varchar direction
+        varchar direction "VARCHAR(32)"
         numeric price_rub
         bigint quantity
     }
 
     mart_market_activity {
         varchar figi PK
-        datetime minute PK
+        datetime day PK
         numeric open_price
+        numeric high_price
+        numeric low_price
         numeric close_price
         bigint volume
-        bigint trade_count
+        bigint candle_count
+        float avg_trade_size
     }
 ```
 ## Технологический стек
 ### Языки и библиотеки:
-
-* Python 3.10+ (PySpark, Pydantic, psycopg2, boto3, aiokafka)
+* Python 3.12+ (PySpark, Pydantic, psycopg2, boto3, aiokafka)
 
 * SQL (PostgreSQL, ClickHouse)
-
 ### Обработка данных и инфраструктура:
-
 * Оркестрация: Apache Airflow (CeleryExecutor)
 
-* Оркестрация Spark: Apache Airflow (SparkSubmitOperator)
+* Потоковая обработка: Apache Spark Structured Streaming (изолированный сервис)
 
-* Потоковая обработка: Apache Spark Structured Streaming
-
-* Пакетная обработка: Apache Spark (Batch)
+* Пакетная обработка: Python (Airflow PythonOperator)
 
 * Брокер сообщений: Apache Kafka (KRaft mode)
 
 * Data Lake: MinIO (S3-совместимое хранилище)
 
-* Реляционная БД (DWH): PostgreSQL
+* Реляционная БД (DWH): PostgreSQL (с партиционированием по времени)
 
 * Аналитическая БД (Витрины): ClickHouse
-
 ### DevOps и качество кода:
-
-* Контейнеризация: Docker, Docker Compose (Multi-stage builds)
+* Контейнеризация: Docker, Docker Compose
 
 * CI/CD: GitHub Actions (Lint, Type-check, Tests, Publish Docker Images)
 
 * Линтеры и типизация: Ruff, Mypy (strict mode)
 
 * Тестирование: Pytest
-
-
-
 ## Структура репозитория
-
 ```text
 ├── src/tinvest_flow/      # Исходный код (src-layout)
 │   ├── common/            # Инфраструктурные утилиты (S3, logging)
 │   ├── config.py          # Валидация конфигурации (Pydantic Settings)
-│   ├── ingestion/         # Модули сбора данных (REST, WebSocket)
-│   └── processing/        # Задания Spark (Batch, Streaming)
-├── dags/                  # DAG-файлы Airflow (только оркестрация, без бизнес-логики)
+│   ├── ingestion/         # Модули сбора данных (REST, WebSocket, Producer)
+│   └── processing/        # Batch ETL и Spark Streaming джобы
+├── dags/                  # DAG-файлы Airflow (оркестрация)
 ├── infra/                 # DDL-скрипты инициализации PostgreSQL и ClickHouse
 ├── tests/                 # Pytest (Unit-тесты)
 ├── docker-compose.yml     # Описание локальной инфраструктуры
@@ -139,11 +127,11 @@ erDiagram
 ```
 ## Развертывание (Local Development)
 ### Требования
-* Docker и Docker Compose
-* Токен песочницы T-Invest API и ID виртуального счета
+* Docker и Docker Compose (рекомендуется выделить не менее 8 ГБ RAM для WSL2/Docker Desktop).
 
+* Токен песочницы T-Invest API и ID виртуального счета.
 ### Запуск инфраструктуры
-1. Настройте переменные окружения:
+1. Настройте переменные окружения
 
 ```bash
 cp .env.example .env
@@ -159,45 +147,27 @@ docker compose up -d --build
 * dwh_postgres: Type=Postgres, Host=postgres_dwh, DB=dwh, Login=dwh, Password=dwh, Port=5432.
 
 * aws_default: Type=AWS, Login=minioadmin, Password=minioadmin, Extra={"endpoint_url": "http://minio:9000"}.
-
 ### Запуск Batch-пайплайна
-В веб-интерфейсе Airflow последовательно активируйте и запустите DAGs:
+DAG-и связаны через TriggerDagRunOperator. Достаточно запустить первый DAG, остальные выполнятся автоматически.
 
-1. batch_ingest_candles (Сбор исторических данных)
+1. В веб-интерфейсе Airflow запустите DAG batch_ingest_candles (Сбор исторических данных).
 
-2. bronze_to_silver_candles (Загрузка в PostgreSQL)
+2. Он автоматически инициирует bronze_to_silver_candles (Загрузка в PostgreSQL).
 
-3. silver_to_gold_marts (Агрегация в ClickHouse)
-
+3. Затем данные попадут в silver_to_gold_marts (Агрегация в ClickHouse).
 ### Запуск Streaming-пайплайна
-Запустите продюсера (слушает WebSocket и пишет в Kafka):
+Контур потоковой обработки изолирован от оркестратора Airflow. Spark Streaming работает как независимый долгоживущий сервис.
+
+Запустите Spark-джобу (она читает Kafka, пишет в PostgreSQL и перезапускается при сбоях):
 
 ```bash
-docker compose exec airflow-worker python -m tinvest_flow.ingestion.trades_producer
+docker compose up -d spark-streaming
 ```
-В отдельном терминале запустите Spark-джобу (читает Kafka, пишет в PostgreSQL):
+Для отправки тестовых данных используйте встроенный симулятор сделок:
 
 ```bash
-docker compose exec spark-master /opt/spark/bin/spark-submit \
-  --master spark://spark-master:7077 \
-  --packages org.postgresql:postgresql:42.7.1,org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1 \
-  --conf spark.jars.ivy=/tmp/.ivy \
-  /opt/spark-apps/src/tinvest_flow/processing/stream_trades_to_silver.py
+docker compose up -d trade-simulator
 ```
-
-###  Демонстрация работы (Demo Mode)
-
-Для быстрой проверки работоспособности потокового контура (Kafka -> Spark -> PostgreSQL) без ручного запуска сделок через API предусмотрен изолированный демо-стенд.
-
-Выполните в терминале:
-```bash
-# Для Windows
-.\demo\run_demo.ps1
-
-# Для Linux/macOS
-./demo/run_demo.sh
-```
-
 ## Контроль качества и CI/CD
 * Статический анализ: ruff (линтер) и mypy (строгая проверка типов, strict = true).
 
@@ -208,32 +178,30 @@ docker compose exec spark-master /opt/spark/bin/spark-submit \
 * CI: GitHub Actions проверяет типы, стиль кода и прогоняет тесты при каждом PR.
 
 * CD: GitHub Actions собирает multi-platform Docker-образы (linux/amd64, linux/arm64) и публикует их в GitHub Container Registry.
-
 ## Интеграция с BI (Metabase)
-
-Для демонстрации конечного потребления данных в проект интегрирован инструмент визуализации Metabase. Он подключается напрямую к слою Gold (ClickHouse), позволяя аналитикам строить отчеты без написания SQL-запросов.
+Для демонстрации конечного потребления данных в проект интегрирован Metabase. Он подключается напрямую к слою Gold (ClickHouse), позволяя аналитикам строить отчеты без написания SQL-запросов. Пример агрегированного запроса по витрине mart_market_activity доступен в папке docs/images/.
 
 Пример агрегированного запроса по витрине `mart_market_activity`: суммарный объем торгов (`volume`) в разрезе финансовых инструментов (`figi`).
 
 ![Metabase Example](docs/images/metabase-example.png)
-
 ## Ключевые инженерные решения (ADR)
+* ADR-001: Паттерн JDBC UPSERT в Spark Streaming с защитой от дубликатов.
+Стандартный Spark JDBC не поддерживает UPSERT. Данные батча пишутся в уникальную staging-таблицу (stg_trades_{batch_id}), после чего выполняется нативный SQL-запрос (INSERT ... ON CONFLICT DO UPDATE). Для предотвращения ошибки CardinalityViolation при дублирующихся сообщениях в Kafka применяется dropDuplicates(["trade_id", "trade_datetime"]) в DataFrame перед вставкой.
 
-*   **ADR-001: Паттерн JDBC UPSERT в Spark Streaming.** 
-    Стандартный Spark JDBC не поддерживает `UPSERT`. Вместо использования `df.collect()` (который уронит драйвер на больших батчах), данные параллельно пишутся в уникальную staging-таблицу (`stg_trades_{batch_id}`). Затем быстрый нативный SQL-запрос (`INSERT ... ON CONFLICT DO UPDATE`) сливает данные в целевую таблицу. Это решает проблему race condition и сохраняет распределенный характер обработки.
+* ADR-002: Dead Letter Queue (DLQ) для потоковых данных.
+В Spark Structured Streaming добавлен режим PERMISSIVE. Сообщения с нарушенной схемой (invalid JSON) перехватываются в поле _corrupt_record и отправляются в отдельный Kafka-топик (raw_trades_dlq) для последующего анализа, не нарушая работу основного пайплайна.
 
-*   **ADR-002: Dead Letter Queue (DLQ) для потоковых данных.** 
-    В Spark Structured Streaming добавлен режим `PERMISSIVE`. Сообщения с нарушенной схемой (invalid JSON) не роняют весь пайплайн, а перехватываются в поле `_corrupt_record` и отправляются в отдельный Kafka-топик (`raw_trades_dlq`) для последующего анализа.
+* ADR-003: Управление партиционированием в PostgreSQL.
+Таблицы dds_trades и dds_candles партиционированы по времени (RANGE). Для предотвращения падений при поступлении данных за периоды, на которые еще нет партиций, реализован DAG manage_partitions, который ежедневно проверяет и создает партиции на 3 месяца вперед. DEFAULT-партиции не используются.
 
-*   **ADR-003: Партиционирование в PostgreSQL.** 
-    Таблицы `dds_trades` и `dds_candles` используют декларативное партиционирование по времени (`RANGE`). Это необходимо для поддержания высокой скорости чтения и записи при росте данных (в production-среде партиции создаются автоматически через pg_partman или Airflow).
+* ADR-004: Гибридная Lambda архитектура и развязка Spark Streaming.
+Spark Streaming работает как независимый сервис в Docker (restart: always). Это предотвращает блокировку слотов Airflow и решает проблему ограничений Standalone-кластера Spark (отсутствие поддержки deploy-mode: cluster для Python-приложений).
 
-*   **ADR-004: Гибридная Lambda/Kappa архитектура.**
-    Batch-контур (REST API -> S3 -> Postgres) обеспечивает загрузку исторических данных и возможность backfill-пересчетов. Streaming-контур (WebSocket -> Kafka -> Spark -> Postgres) обрабатывает события в реальном времени. Витрины (ClickHouse) объединяют данные из обоих слоев.
+* ADR-005: Чанковая агрегация в ClickHouse (защита от OOM).
+При построении витрин используется потоковое чтение из PostgreSQL через серверный курсор (RealDictCursor, itersize=100_000). Таблица в ClickHouse очищается (TRUNCATE) перед полной перезаписью для обеспечения идемпотентности. Это предотвращает выгрузку всей таблицы в RAM и дублирование данных при перезапусках.
 
-*   **ADR-005: Чанковая агрегация в ClickHouse (защита от OOM).**
-    При построении витрин используется потоковое чтение из PostgreSQL через серверный курсор (`RealDictCursor`, `itersize=100_000`). Это предотвращает выгрузку всей таблицы в оперативную память (OOM) и позволяет безопасно агрегировать данные любого объема.
-
+* ADR-006: Оконная пагинация при загрузке исторических данных.
+В связи с лимитами T-Invest API на количество возвращаемых свечей, метод fetch_candles разбивает запрошенный период на временные окна (в зависимости от интервала), что гарантирует загрузку полного объема исторических данных без потерь.
 ## Автор
 
 **Mifestos** 
