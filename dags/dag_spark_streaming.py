@@ -24,12 +24,27 @@ with DAG(
         task_id="submit_trades_streaming",
         conn_id="spark_default",
         application="/opt/airflow/src/tinvest_flow/processing/stream_trades_to_silver.py",
-        packages="org.postgresql:postgresql:42.7.1,org.apache.spark:spark-sql-kafka-0-10_2.13:4.0.0",
+        packages=(
+            "org.postgresql:postgresql:42.7.1,"
+            "org.apache.spark:spark-sql-kafka-0-10_2.13:4.0.0,"
+            "org.apache.hadoop:hadoop-aws:3.4.1,"
+            "com.amazonaws:aws-java-sdk-bundle:1.12.262"
+        ),
         conf={
             "spark.jars.ivy": "/tmp/.ivy",
             "spark.master": "spark://spark-master:7077",
             "spark.sql.ansi.enabled": "false",
+            "spark.driver.memory": "512m",
+            "spark.executor.memory": "512m",
+            "spark.executor.cores": "1",
+            "spark.cores.max": "1",
+            "spark.hadoop.fs.s3a.endpoint": "http://minio:9000",
+            "spark.hadoop.fs.s3a.access.key": "minioadmin",
+            "spark.hadoop.fs.s3a.secret.key": "minioadmin",
+            "spark.hadoop.fs.s3a.path.style.access": "true",
+            "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem",
+            "spark.hadoop.fs.s3a.connection.ssl.enabled": "false",
         },
-        execution_timeout=timedelta(minutes=15),
+        # execution_timeout=timedelta(minutes=15),
         verbose=True,
     )

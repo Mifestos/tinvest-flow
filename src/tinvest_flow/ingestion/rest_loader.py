@@ -66,6 +66,10 @@ def upload_batch(
     candles = fetch_candles(figi, interval, from_date, to_date)
     records = _candles_to_records(candles, figi, interval_name)
 
+    if not records:
+        logger.warning("API вернул 0 свечей для %s. Файл в S3 не создаем.", figi)
+        return None
+
     s3 = get_s3_client()
     ensure_bucket(s3, settings.minio_bucket_bronze)
 

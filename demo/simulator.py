@@ -23,7 +23,7 @@ INSTRUMENTS = [
 ]
 
 
-async def generate_stream(total_events: int = 50):
+async def generate_stream(total_events: int = 5):
     producer = AIOKafkaProducer(
         bootstrap_servers=KAFKA_BOOTSTRAP,
         value_serializer=lambda v: json.dumps(v).encode("utf-8"),

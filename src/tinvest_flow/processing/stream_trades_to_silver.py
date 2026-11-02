@@ -37,7 +37,7 @@ TRADE_SCHEMA = StructType(
 
 def _upsert_to_postgres(batch_df: DataFrame, batch_id: int) -> None:
     """Записывает микробатч в PostgreSQL с использованием изолированной staging-таблицы."""
-    if batch_df.rdd.isEmpty():
+    if batch_df.isEmpty():
         return
 
     df = batch_df.withColumn(
@@ -87,11 +87,7 @@ def _upsert_to_postgres(batch_df: DataFrame, batch_id: int) -> None:
 
 def run_streaming_job() -> None:
     """Запуск Spark Structured Streaming с обработкой DLQ."""
-    spark = (
-        SparkSession.builder.appName("trades_kafka_to_silver")
-        .config("spark.sql.streaming.checkpointLocation", "/tmp/checkpoints/trades_silver")
-        .getOrCreate()
-    )
+    spark = SparkSession.builder.appName("trades_kafka_to_silver").getOrCreate()
 
     raw_stream = (
         spark.readStream.format("kafka")
@@ -117,7 +113,7 @@ def run_streaming_job() -> None:
 
     good_query = (  # noqa: F841
         good_df.writeStream.foreachBatch(_upsert_to_postgres)
-        .option("checkpointLocation", "/tmp/checkpoints/trades_silver_good")
+        .option("checkpointLocation", "s3a://checkpoints/trades_silver_good")
         .trigger(processingTime="10 seconds")
         .start()
     )
@@ -127,7 +123,7 @@ def run_streaming_job() -> None:
         .writeStream.format("kafka")
         .option("kafka.bootstrap.servers", settings.kafka_bootstrap)
         .option("topic", "raw_trades_dlq")
-        .option("checkpointLocation", "/tmp/checkpoints/trades_silver_dlq")
+        .option("checkpointLocation", "s3a://checkpoints/trades_silver_dlq")
         .start()
     )
 
