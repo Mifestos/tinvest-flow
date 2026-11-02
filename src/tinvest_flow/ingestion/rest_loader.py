@@ -59,7 +59,7 @@ def fetch_candles(
 
 def upload_batch(
     figi: str, interval: CandleInterval, from_date: datetime, to_date: datetime, load_date: str
-) -> str:
+) -> str | None:
     """Загружает свечи и сохраняет в S3. Дата фиксируется для идемпотентности."""
     interval_name = INTERVAL_MAP[interval]
 
