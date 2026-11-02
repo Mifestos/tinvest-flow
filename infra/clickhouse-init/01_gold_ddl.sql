@@ -13,13 +13,13 @@ ORDER BY (figi, trade_datetime, trade_id);
 
 CREATE TABLE IF NOT EXISTS gold.mart_market_activity (
     figi            String,
-    minute          DateTime,
+    day             DateTime,
     open_price      Decimal(18, 9),
     high_price      Decimal(18, 9),
     low_price       Decimal(18, 9),
     close_price     Decimal(18, 9),
     volume          Int64,
-    trade_count     Int64,
+    candle_count     Int64,
     avg_trade_size  Float64
 ) ENGINE = ReplacingMergeTree()
 PARTITION BY toYYYYMM(minute)

@@ -19,16 +19,18 @@ def build_market_activity_mart() -> None:
     query = """
         SELECT
             figi,
-            date_trunc('day', candle_time) AS minute,
+            date_trunc('day', candle_time) AS day,
             (array_agg(open ORDER BY candle_time ASC))[1]  AS open_price,
             max(high)  AS high_price,
             min(low)   AS low_price,
             (array_agg(close ORDER BY candle_time DESC))[1] AS close_price,
             sum(volume) AS volume,
-            count(*)    AS trade_count,
+            count(*)    AS candle_count,
             avg(volume) AS avg_trade_size
         FROM dds.dds_candles
-        GROUP BY figi, minute
+        WHERE is_complete = true
+        GROUP BY figi, day
+        ORDER BY figi, day
     """
 
     pg_conn = psycopg2.connect(
@@ -61,17 +63,19 @@ def build_market_activity_mart() -> None:
                 df = pd.DataFrame(rows)
                 columns = [
                     "figi",
-                    "minute",
+                    "day",
                     "open_price",
                     "high_price",
                     "low_price",
                     "close_price",
                     "volume",
-                    "trade_count",
+                    "candle_count",
                     "avg_trade_size",
                 ]
+                df = df[columns]
+                df["avg_trade_size"] = df["avg_trade_size"].astype("float64")
 
-                ch_client.insert_df("gold.mart_market_activity", df[columns])
+                ch_client.insert_df("gold.mart_market_activity", df)
                 total_rows += len(rows)
                 logger.info(f"Inserted chunk of {len(rows)} rows. Total: {total_rows}")
 
