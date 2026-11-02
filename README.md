@@ -25,29 +25,29 @@ graph TD
     API_WS["T-Invest WebSocket"]
     
     %% Оркестрация и Обработка
-    Airflow["Apache Airflow\n(Оркестратор Batch-процессов)"]
-    PyBatch["Python ETL\n(psycopg2 / pandas)"]
+    Airflow["Apache Airflow<br>(Оркестратор Batch-процессов)"]
+    PyBatch["Python ETL<br>(psycopg2 / pandas)"]
     Kafka["Apache Kafka"]
-    Spark_Stream["Spark Structured Streaming\n(Изолированный контейнер)"]
+    Spark_Stream["Spark Structured Streaming<br>(Изолированный контейнер)"]
 
     %% Слои хранения (Medallion Architecture)
-    MinIO[("MinIO S3\n(Bronze Layer)")]
-    Postgres[("PostgreSQL\n(Silver Layer)")]
-    ClickHouse[("ClickHouse\n(Gold Layer)")]
+    MinIO[("MinIO S3<br>(Bronze Layer)")]
+    Postgres[("PostgreSQL<br>(Silver Layer)")]
+    ClickHouse[("ClickHouse<br>(Gold Layer)")]
 
     %% Batch Flow (Управляется Airflow)
-    Airflow -.->|Запускает DAG| PyBatch
-    PyBatch -.->|Запрос данных| API_REST
-    API_REST -->|Сырой JSON| MinIO
-    MinIO -->|Чтение (Bronze->Silver)| PyBatch
-    PyBatch -->|UPSERT свечей| Postgres
-    Postgres -->|Чтение (Silver->Gold)| PyBatch
-    PyBatch -->|Запись витрины| ClickHouse
+    Airflow -.->|"Запускает DAG"| PyBatch
+    PyBatch -.->|"Запрос данных"| API_REST
+    API_REST -->|"Сырой JSON"| MinIO
+    MinIO -->|"Чтение (Bronze → Silver)"| PyBatch
+    PyBatch -->|"UPSERT свечей"| Postgres
+    Postgres -->|"Чтение (Silver → Gold)"| PyBatch
+    PyBatch -->|"Запись витрины"| ClickHouse
 
     %% Streaming Flow (Работает автономно)
-    API_WS -->|Python Producer| Kafka
-    Kafka -->|Чтение стрима| Spark_Stream
-    Spark_Stream -->|JDBC UPSERT сделок| Postgres
+    API_WS -->|"Python Producer"| Kafka
+    Kafka -->|"Чтение стрима"| Spark_Stream
+    Spark_Stream -->|"JDBC UPSERT сделок"| Postgres
 ```
 ## Схема данных (Data Model)
 ```mermaid
