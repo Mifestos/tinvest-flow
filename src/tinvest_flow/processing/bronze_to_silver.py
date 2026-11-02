@@ -15,11 +15,8 @@ logger = logging.getLogger(__name__)
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-def load_candles_to_postgres(ds: str) -> None:
+def load_candles_to_postgres(ds: str, figi: str, interval: str) -> None:
     """Читает JSON из S3 за дату ds и выполняет UPSERT в dds.dds_candles."""
-    figis = ["BBG004730N88", "BBG004730RP0"]
-    interval = "5min"
-
     s3 = get_s3_client()
 
     conn = psycopg2.connect(
@@ -31,33 +28,33 @@ def load_candles_to_postgres(ds: str) -> None:
     )
 
     rows_to_insert = []
+    key = f"candles/{figi}/{interval}/{ds}/data.json"
 
-    for figi in figis:
-        key = f"candles/{figi}/{interval}/{ds}/data.json"
-        try:
-            response = s3.get_object(Bucket=settings.minio_bucket_bronze, Key=key)
-            data = json.loads(response["Body"].read().decode("utf-8"))
-            rows_to_insert.extend(
-                [
-                    (
-                        r["figi"],
-                        r["interval"],
-                        r["time"],
-                        r["open"],
-                        r["high"],
-                        r["low"],
-                        r["close"],
-                        r["volume"],
-                        r["is_complete"],
-                    )
-                    for r in data
-                ]
-            )
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "NoSuchKey":
-                logger.warning("S3 object not found: %s", key)
-            else:
-                logger.error("S3 read failed for %s: %s", key, e)
+    try:
+        response = s3.get_object(Bucket=settings.minio_bucket_bronze, Key=key)
+        data = json.loads(response["Body"].read().decode("utf-8"))
+        rows_to_insert.extend(
+            [
+                (
+                    r["figi"],
+                    r["interval"],
+                    r["time"],
+                    r["open"],
+                    r["high"],
+                    r["low"],
+                    r["close"],
+                    r["volume"],
+                    r["is_complete"],
+                )
+                for r in data
+            ]
+        )
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "NoSuchKey":
+            logger.warning("S3 object not found: %s", key)
+            return
+        logger.error("S3 read failed for %s: %s", key, e)
+        raise
 
     if not rows_to_insert:
         logger.info("No data to insert for date %s", ds)

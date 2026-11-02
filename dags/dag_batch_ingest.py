@@ -5,13 +5,14 @@ from datetime import UTC, datetime, timedelta
 from airflow import DAG
 from airflow.models.param import Param
 from airflow.operators.python import PythonOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from t_tech.invest import CandleInterval
 
-from tinvest_flow.ingestion.rest_loader import upload_batch
+from tinvest_flow.ingestion.rest_loader import INTERVAL_MAP, upload_batch
 
 
-def load_candles_task(figi: str, interval: CandleInterval, **context) -> None:
-    """Функция загрузки. Читает параметры из context['params']."""
+def load_candles_task(figi: str, interval: CandleInterval, **context) -> dict:
+    """Функция загрузки. Возвращает словарь с параметрами для Silver DAG."""
     params = context["params"]
 
     start_str = params.get("start_date")
@@ -26,28 +27,25 @@ def load_candles_task(figi: str, interval: CandleInterval, **context) -> None:
         start_dt = end_dt - timedelta(days=lookback)
 
     ds = end_dt.strftime("%Y-%m-%d")
+    interval_name = INTERVAL_MAP[interval]
 
     upload_batch(figi=figi, interval=interval, from_date=start_dt, to_date=end_dt, load_date=ds)
+
+    return {"load_date": ds, "figi": figi, "interval": interval_name}
 
 
 with DAG(
     dag_id="batch_ingest_candles",
     default_args={"owner": "data-engineering", "retries": 1, "retry_delay": timedelta(minutes=5)},
     description="Загрузка исторических данных из T-Invest API в S3 (Bronze)",
-    schedule=None,  # Только ручной запуск
+    schedule=None,
     start_date=datetime(2025, 1, 1),
     catchup=False,
     tags=["tbank", "ingestion", "bronze"],
     params={
-        "start_date": Param(
-            None, type=["null", "string"], description="Начало периода (YYYY-MM-DD или ISO 8601)"
-        ),
-        "end_date": Param(
-            None, type=["null", "string"], description="Конец периода (YYYY-MM-DD или ISO 8601)"
-        ),
-        "lookback_days": Param(
-            1, type="integer", description="Сколько дней назад забрать, если даты не указаны"
-        ),
+        "start_date": Param(None, type=["null", "string"], description="Начало периода"),
+        "end_date": Param(None, type=["null", "string"], description="Конец периода"),
+        "lookback_days": Param(1, type="integer", description="Сколько дней назад забрать"),
     },
 ) as dag:
     load_sber = PythonOperator(
@@ -55,3 +53,15 @@ with DAG(
         python_callable=load_candles_task,
         op_kwargs={"figi": "BBG004730N88", "interval": CandleInterval.CANDLE_INTERVAL_5_MIN},
     )
+
+    trigger_silver = TriggerDagRunOperator(
+        task_id="trigger_bronze_to_silver",
+        trigger_dag_id="bronze_to_silver_candles",
+        conf={
+            "load_date": "{{ ti.xcom_pull(task_ids='load_sber_candles')['load_date'] }}",
+            "figi": "{{ ti.xcom_pull(task_ids='load_sber_candles')['figi'] }}",
+            "interval": "{{ ti.xcom_pull(task_ids='load_sber_candles')['interval'] }}",
+        },
+    )
+
+    load_sber >> trigger_silver

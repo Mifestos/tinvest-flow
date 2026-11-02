@@ -9,8 +9,14 @@ from tinvest_flow.processing.bronze_to_silver import load_candles_to_postgres
 
 
 def run_silver_load(**context) -> None:
-    ds = context["ds"]
-    load_candles_to_postgres(ds=ds)
+    dag_run = context.get("dag_run")
+    conf = dag_run.conf if dag_run and dag_run.conf else {}
+
+    ds = conf.get("load_date", context["ds"])
+    figi = conf.get("figi", "BBG004730N88")
+    interval = conf.get("interval", "5min")
+
+    load_candles_to_postgres(ds=ds, figi=figi, interval=interval)
 
 
 with DAG(
