@@ -50,6 +50,10 @@ def build_market_activity_mart() -> None:
     )
 
     try:
+        # Дубли
+        logger.info("Truncating gold.mart_market_activity for full reload...")
+        ch_client.command("TRUNCATE TABLE gold.mart_market_activity")
+
         with pg_conn.cursor(name="chunk_cursor", cursor_factory=RealDictCursor) as cur:
             cur.itersize = CHUNK_SIZE
             cur.execute(query)
