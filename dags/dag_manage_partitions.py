@@ -10,27 +10,43 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 logger = logging.getLogger(__name__)
 
 
-def create_next_month_partitions(**context) -> None:
-    """Создает партиции для dds_trades и dds_candles на следующий месяц."""
+def get_next_months(start_date: datetime, n: int) -> list[tuple[datetime, datetime]]:
+    """Возвращает список из n пар (начало_месяца, конец_месяца) начиная со следующего месяца."""
+    months = []
+    current = start_date.replace(day=1)
+    for _ in range(n):
+        if current.month == 12:
+            next_month = current.replace(year=current.year + 1, month=1)
+        else:
+            next_month = current.replace(month=current.month + 1)
+        months.append((current, next_month))
+        current = next_month
+    return months
+
+
+def create_future_partitions(**context) -> None:
+    """Создает партиции для dds_trades и dds_candles на 3 месяца вперед."""
     pg = PostgresHook(postgres_conn_id="dwh_postgres")
 
-    next_month = (context["data_interval_start"] + timedelta(days=32)).replace(day=1)
-    month_start = next_month.strftime("%Y-%m-%d")
-    month_end = (next_month + timedelta(days=32)).replace(day=1).strftime("%Y-%m-%d")
-    suffix = next_month.strftime("%Y_%m")
+    start_date = context["data_interval_start"]
+    months = get_next_months(start_date, 3)
 
-    queries = [
-        (
-            f"CREATE TABLE IF NOT EXISTS dds.dds_trades_{suffix} "
-            f"PARTITION OF dds.dds_trades "
-            f"FOR VALUES FROM ('{month_start}') TO ('{month_end}');"
-        ),
-        (
-            f"CREATE TABLE IF NOT EXISTS dds.dds_candles_{suffix} "
-            f"PARTITION OF dds.dds_candles "
-            f"FOR VALUES FROM ('{month_start}') TO ('{month_end}');"
-        ),
-    ]
+    queries = []
+    for month_start, month_end in months:
+        start_str = month_start.strftime("%Y-%m-%d")
+        end_str = month_end.strftime("%Y-%m-%d")
+        suffix = month_start.strftime("%Y_%m")
+
+        queries.extend(
+            [
+                f"CREATE TABLE IF NOT EXISTS dds.dds_trades_{suffix} "
+                f"PARTITION OF dds.dds_trades "
+                f"FOR VALUES FROM ('{start_str}') TO ('{end_str}');",
+                f"CREATE TABLE IF NOT EXISTS dds.dds_candles_{suffix} "
+                f"PARTITION OF dds.dds_candles "
+                f"FOR VALUES FROM ('{start_str}') TO ('{end_str}');",
+            ]
+        )
 
     conn = pg.get_conn()
     try:
@@ -39,6 +55,7 @@ def create_next_month_partitions(**context) -> None:
                 cur.execute(q)
                 logger.info(f"Executed: {q}")
         conn.commit()
+        logger.info("Successfully checked/created partitions for 3 months ahead.")
     finally:
         conn.close()
 
@@ -46,13 +63,13 @@ def create_next_month_partitions(**context) -> None:
 with DAG(
     dag_id="manage_partitions",
     default_args={"owner": "data-engineering", "retries": 1, "retry_delay": timedelta(minutes=5)},
-    description="Создание партиций на следующий месяц",
-    schedule="0 0 25 * *",
+    description="Создание партиций на 3 месяца вперед (запускается ежедневно)",
+    schedule="@daily",
     start_date=datetime(2025, 1, 1),
     catchup=False,
     tags=["tbank", "maintenance", "postgres"],
 ) as dag:
     PythonOperator(
-        task_id="create_next_month_partitions",
-        python_callable=create_next_month_partitions,
+        task_id="create_future_partitions",
+        python_callable=create_future_partitions,
     )

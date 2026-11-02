@@ -26,7 +26,6 @@ CREATE TABLE IF NOT EXISTS dds.dds_trades_2026_10 PARTITION OF dds.dds_trades
     FOR VALUES FROM ('2026-10-01') TO ('2026-11-01');
 CREATE TABLE IF NOT EXISTS dds.dds_trades_2026_11 PARTITION OF dds.dds_trades
     FOR VALUES FROM ('2026-11-01') TO ('2026-12-01');
-CREATE TABLE IF NOT EXISTS dds.dds_trades_default PARTITION OF dds.dds_trades DEFAULT;
 
 CREATE INDEX IF NOT EXISTS idx_dds_trades_figi_time ON dds.dds_trades (figi, trade_datetime DESC);
 
@@ -52,6 +51,5 @@ CREATE TABLE IF NOT EXISTS dds.dds_candles_2026_10 PARTITION OF dds.dds_candles
     FOR VALUES FROM ('2026-10-01') TO ('2026-11-01');
 CREATE TABLE IF NOT EXISTS dds.dds_candles_2026_11 PARTITION OF dds.dds_candles
     FOR VALUES FROM ('2026-11-01') TO ('2026-12-01');
-CREATE TABLE IF NOT EXISTS dds.dds_candles_default PARTITION OF dds.dds_candles DEFAULT;
 
 CREATE INDEX IF NOT EXISTS idx_dds_candles_time ON dds.dds_candles (candle_time DESC);
