@@ -29,7 +29,7 @@ TRADE_SCHEMA = StructType(
         StructField("price_units", LongType()),
         StructField("price_nano", LongType()),
         StructField("quantity", LongType()),
-        StructField("date_time", StringType()),
+        StructField("trade_datetime", StringType()),
         StructField("_corrupt_record", StringType()),
     ]
 )
@@ -46,6 +46,8 @@ def _upsert_to_postgres(batch_df: DataFrame, batch_id: int) -> None:
             DecimalType(18, 9)
         ),
     ).drop("price_units", "price_nano")
+
+    df = df.dropDuplicates(["trade_id", "trade_datetime"])
 
     staging_table = f"stg_trades_{batch_id}"
 
@@ -68,7 +70,7 @@ def _upsert_to_postgres(batch_df: DataFrame, batch_id: int) -> None:
             cur.execute(f"""
                 INSERT INTO dds.dds_trades
                 SELECT trade_id, order_id, account_id, instrument_uid, figi, 
-                       direction, price_rub, quantity, date_time::timestamptz
+                       direction, price_rub, quantity, trade_datetime::timestamptz
                 FROM {staging_table}
                 ON CONFLICT (trade_id, trade_datetime) DO UPDATE SET  
                     price_rub = EXCLUDED.price_rub,
@@ -104,8 +106,8 @@ def run_streaming_job() -> None:
             )
         )
         .select("data.*")
-        .withColumn("date_time", F.try_to_timestamp("date_time"))
-        .filter(F.col("date_time").isNotNull())
+        .withColumn("trade_datetime", F.try_to_timestamp("trade_datetime"))
+        .filter(F.col("trade_datetime").isNotNull())
     )
 
     good_df = parsed_stream.filter(F.col("_corrupt_record").isNull()).drop("_corrupt_record")

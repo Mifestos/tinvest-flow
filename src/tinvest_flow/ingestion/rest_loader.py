@@ -2,7 +2,7 @@
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, cast
 
 from t_tech.invest import CandleInterval, Client
@@ -17,6 +17,15 @@ INTERVAL_MAP = {
     CandleInterval.CANDLE_INTERVAL_1_MIN: "1min",
     CandleInterval.CANDLE_INTERVAL_5_MIN: "5min",
     CandleInterval.CANDLE_INTERVAL_HOUR: "1hour",
+}
+
+MAX_CANDLES_PER_REQUEST = 2400
+
+# Размер временного окна для каждого интервала (с запасом, чтобы не превысить лимит)
+INTERVAL_MAX_SPAN = {
+    CandleInterval.CANDLE_INTERVAL_1_MIN: timedelta(days=1),  # 1 день * 8ч * 60мин = ~480 свечей
+    CandleInterval.CANDLE_INTERVAL_5_MIN: timedelta(days=7),  # 7 дней * 8ч * 12 = ~672 свечи
+    CandleInterval.CANDLE_INTERVAL_HOUR: timedelta(days=30),  # 30 дней * 8ч = ~240 свечей
 }
 
 
@@ -46,15 +55,49 @@ def _candles_to_records(candles: list[Any], figi: str, interval_name: str) -> li
 def fetch_candles(
     figi: str, interval: CandleInterval, from_date: datetime, to_date: datetime
 ) -> list[Any]:
-    """Запрашивает исторические свечи из API за указанный интервал."""
+    """Запрашивает исторические свечи, разбивая период на окна без использования next_cursor."""
+    max_span = INTERVAL_MAX_SPAN.get(interval)
+
+    candles: list[Any] = []
+    seen_times: set[str] = set()
+
     with Client(
         token=settings.tinkoff_sandbox_token.get_secret_value(),
         target=INVEST_GRPC_API_SANDBOX,
     ) as client:
-        response = client.market_data.get_candles(
-            figi=figi, from_=from_date, to=to_date, interval=interval
-        )
-    return cast(list[Any], response.candles)
+        window_start = from_date
+        while window_start < to_date:
+            window_end = min(window_start + max_span, to_date) if max_span else to_date
+
+            response = client.market_data.get_candles(
+                figi=figi, from_=window_start, to=window_end, interval=interval
+            )
+            page = list(response.candles)
+
+            logger.info(
+                "Fetched %d candles for window %s..%s (%s, %s)",
+                len(page),
+                window_start,
+                window_end,
+                figi,
+                INTERVAL_MAP.get(interval, "?"),
+            )
+
+            for c in page:
+                key = c.time.isoformat()
+                if key not in seen_times:
+                    seen_times.add(key)
+                    candles.append(c)
+
+            window_start = window_end
+
+    logger.info(
+        "Total candles fetched for %s (%s): %d",
+        figi,
+        INTERVAL_MAP.get(interval, "?"),
+        len(candles),
+    )
+    return cast(list[Any], candles)
 
 
 def upload_batch(

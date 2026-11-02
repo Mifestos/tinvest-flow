@@ -34,3 +34,5 @@ plugins/*.db
 
 # Local development overrides
 docker-compose.override.yml
+
+scripts/

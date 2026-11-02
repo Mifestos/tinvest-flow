@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS dds.dds_trades (
     account_id      VARCHAR(64),
     instrument_uid  VARCHAR(64),
     figi            VARCHAR(32),
-    direction       VARCHAR(8),
+    direction       VARCHAR(32),
     price_rub       NUMERIC(18, 9) NOT NULL CHECK (price_rub > 0),
     quantity        BIGINT NOT NULL CHECK (quantity > 0),
     trade_datetime  TIMESTAMPTZ NOT NULL,
