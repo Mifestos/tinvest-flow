@@ -182,9 +182,11 @@ docker compose up -d trade-simulator
 ## Интеграция с BI (Metabase)
 Для демонстрации конечного потребления данных в проект интегрирован Metabase. Он подключается напрямую к слою Gold (ClickHouse), позволяя аналитикам строить отчеты без написания SQL-запросов. Пример агрегированного запроса по витрине mart_market_activity доступен в папке docs/images/.
 
-Пример агрегированного запроса по витрине `mart_market_activity`: суммарный объем торгов (`volume`) в разрезе финансовых инструментов (`figi`).
+Пример витрины дневных баров (OHLCV) и агрегации сделок в ClickHouse, визуализированные в Metabase.
 
-![Metabase Example](docs/images/metabase-example.png)
+![Metabase Example](docs/images/mart_market_activity.png)
+
+![Metabase Example](docs/images/mart_trade_activity.png)
 ## Ключевые инженерные решения (ADR)
 * ADR-001: Паттерн JDBC UPSERT в Spark Streaming с защитой от дубликатов.
 Стандартный Spark JDBC не поддерживает UPSERT. Данные батча пишутся в уникальную staging-таблицу (stg_trades_{batch_id}), после чего выполняется нативный SQL-запрос (INSERT ... ON CONFLICT DO UPDATE). Для предотвращения ошибки CardinalityViolation при дублирующихся сообщениях в Kafka применяется dropDuplicates(["trade_id", "trade_datetime"]) в DataFrame перед вставкой.
