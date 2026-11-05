@@ -20,6 +20,7 @@ dependencies = [
     "tenacity>=8.2",
     "pandas>=2.0",
     "sqlalchemy>=2.0",
+    "pyspark==4.0.0",
 ]
 
 [project.optional-dependencies]

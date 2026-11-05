@@ -36,3 +36,4 @@ plugins/*.db
 docker-compose.override.yml
 
 scripts/
+.coverage
