@@ -20,7 +20,7 @@ dependencies = [
     "tenacity>=8.2",
     "pandas>=2.0",
     "alembic>=1.13",
-    "sqlalchemy>=2.0",
+    "sqlalchemy>=1.4.36,<2.0",
     "pyspark==4.0.0",
 ]
 
