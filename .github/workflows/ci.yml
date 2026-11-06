@@ -41,6 +41,8 @@ jobs:
       - name: Check Alembic migrations (dry-run)
         run: alembic upgrade head --sql > /dev/null
         env:
+          TINKOFF_SANDBOX_TOKEN: "test_token"         
+          TINKOFF_SANDBOX_ACCOUNT_ID: "test_account_id" 
           POSTGRES_DWH_USER: "dwh"
           POSTGRES_DWH_PASSWORD: "dwh"
           POSTGRES_DWH_DB: "dwh"
