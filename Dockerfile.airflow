@@ -29,3 +29,5 @@ RUN pip install --no-cache-dir /opt/airflow \
 
 COPY --chown=airflow:root alembic.ini /opt/airflow/alembic.ini
 COPY --chown=airflow:root migrations/ /opt/airflow/migrations/
+
+COPY --chown=airflow:root migrations/clickhouse/ /opt/airflow/migrations/clickhouse/

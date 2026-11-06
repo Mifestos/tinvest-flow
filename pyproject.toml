@@ -22,6 +22,7 @@ dependencies = [
     "alembic>=1.13",
     "sqlalchemy>=1.4.36,<2.0",
     "pyspark==4.0.0",
+    "great-expectations>=0.18.0,<1.0.0",
 ]
 
 [project.optional-dependencies]

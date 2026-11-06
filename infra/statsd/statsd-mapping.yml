@@ -1,0 +1,9 @@
+mappings:
+  - match: "airflow.*.*.*"
+    name: "airflow_${1}"
+    labels:
+      status: "$2"
+  - match: "airflow.*.*"
+    name: "airflow_${1}"
+    labels:
+      status: "$2"

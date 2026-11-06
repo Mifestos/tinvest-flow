@@ -1,8 +1,7 @@
+-- migrations/clickhouse/V1__init_gold_schema.sql
+
 CREATE DATABASE IF NOT EXISTS gold;
 
--- -----------------------------------------------------------------------------
--- Витрина по свечам (Daily OHLCV) - полная перезапись через TRUNCATE
--- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS gold.mart_market_activity (
     figi            String,
     day             DateTime,
@@ -17,9 +16,6 @@ CREATE TABLE IF NOT EXISTS gold.mart_market_activity (
 PARTITION BY toYYYYMM(day)
 ORDER BY (figi, day);
 
--- -----------------------------------------------------------------------------
--- Витрина по сделкам (Инкрементальная агрегация)
--- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS gold.mart_trade_activity (
     figi            String,
     trade_date      Date,
