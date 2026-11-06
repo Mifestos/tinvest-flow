@@ -2,7 +2,7 @@ name: CD
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch: 
 
 env:
@@ -71,3 +71,15 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta-spark.outputs.tags }}
           labels: ${{ steps.meta-spark.outputs.labels }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Simulate Deployment
+        run: |
+          echo "Deployment started to production server..."
+          echo "Pulling images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_AIRFLOW }}:latest"
+          # В реальном проекте здесь был бы SSH или вызов Webhook:
+          # ssh user@server "cd /app && docker compose pull && docker compose up -d"
+          echo "Deployment completed successfully!"

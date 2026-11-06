@@ -2,15 +2,16 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]      
+    branches: [main, develop]
   pull_request:
-    branches: [main, develop]      
+    branches: [main, develop]
 
 jobs:
-  test:
+  test-and-lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -31,3 +32,34 @@ jobs:
         env:
           TINKOFF_SANDBOX_TOKEN: "test_token"
           TINKOFF_SANDBOX_ACCOUNT_ID: "test_account_id"
+          POSTGRES_DWH_USER: "dwh"
+          POSTGRES_DWH_PASSWORD: "dwh"
+          POSTGRES_DWH_DB: "dwh"
+          POSTGRES_DWH_HOST: "localhost"
+          CLICKHOUSE_HOST: "localhost"
+
+      - name: Check Alembic migrations (dry-run)
+        run: alembic upgrade head --sql > /dev/null
+        env:
+          POSTGRES_DWH_USER: "dwh"
+          POSTGRES_DWH_PASSWORD: "dwh"
+          POSTGRES_DWH_DB: "dwh"
+          POSTGRES_DWH_HOST: "localhost"
+
+  docker-build-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Airflow image (dry-run)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.airflow
+          push: false
+          tags: test-airflow:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
