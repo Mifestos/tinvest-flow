@@ -44,6 +44,7 @@ include = ["tinvest_flow*"]
 src = ["src", "tests"]
 line-length = 100
 target-version = "py312"
+exclude = ["src/tinvest_flow/scripts/"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "SIM", "C4", "RET"]
@@ -56,6 +57,7 @@ warn_return_any = true
 warn_unused_ignores = true
 packages = ["tinvest_flow"]
 mypy_path = "src"
+exclude = "src/tinvest_flow/scripts/"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
@@ -65,6 +67,7 @@ addopts = "-ra --strict-markers --cov=tinvest_flow --cov-report=term-missing"
 [tool.coverage.run]
 source = ["src/tinvest_flow"]
 branch = true
+omit = ["src/tinvest_flow/scripts/*"]
 
 [[tool.mypy.overrides]]
 module = [
@@ -76,5 +79,9 @@ module = [
     "t_tech.*",
     "psycopg2.*",
     "tenacity.*",
+    "sqlalchemy.*",             
+    "great_expectations.*",      
+    "alembic.*",                 
+    "clickhouse_connect.*",      
 ]
 ignore_missing_imports = true
