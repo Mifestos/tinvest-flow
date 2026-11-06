@@ -26,3 +26,6 @@ COPY --chown=airflow:root src/ /opt/airflow/src/
 RUN pip install --no-cache-dir /opt/airflow \
     --extra-index-url https://opensource.tbank.ru/api/v4/projects/238/packages/pypi/simple \
     --trusted-host opensource.tbank.ru
+
+COPY --chown=airflow:root alembic.ini /opt/airflow/alembic.ini
+COPY --chown=airflow:root migrations/ /opt/airflow/migrations/

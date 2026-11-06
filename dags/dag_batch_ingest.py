@@ -48,6 +48,13 @@ with DAG(
         "lookback_days": Param(1, type="integer", description="Сколько дней назад забрать"),
     },
 ) as dag:
+    run_migrations = TriggerDagRunOperator(
+        task_id="run_db_migrations",
+        trigger_dag_id="db_migrations",
+        wait_for_completion=True,
+        poke_interval=5,
+    )
+
     load_sber = PythonOperator(
         task_id="load_sber_candles",
         python_callable=load_candles_task,
@@ -64,4 +71,4 @@ with DAG(
         },
     )
 
-    load_sber >> trigger_silver
+    run_migrations >> load_sber >> trigger_silver
